@@ -37,7 +37,7 @@ const Plan = sequelize.define('Plan', {
     defaultValue: 'pending',
   },
 }, {
-  tableName: 'Plans',
+  tableName: 'plans',
   timestamps: true,
 });
 

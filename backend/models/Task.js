@@ -53,6 +53,7 @@ const Task = sequelize.define('Task', {
     allowNull: true,
   },
 }, {
+  tableName: 'tasks',
   timestamps: true,
 });
 

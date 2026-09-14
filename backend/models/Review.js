@@ -18,6 +18,7 @@ const Review = sequelize.define('Review', {
     defaultValue: DataTypes.NOW,
   }
 }, {
+  tableName: 'reviews',
   timestamps: true,
 });
 
