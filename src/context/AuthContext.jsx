@@ -1,15 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
-
-const AuthContext = createContext();
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
+import { AuthContext } from './useAuth';
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [welcomeGreeting, setWelcomeGreeting] = useState(null);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -40,6 +36,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem('user', JSON.stringify(user));
       
       setCurrentUser(user);
+      setWelcomeGreeting(user.name);
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
@@ -54,6 +51,11 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setCurrentUser(null);
+    setWelcomeGreeting(null);
+  };
+
+  const clearWelcomeGreeting = () => {
+    setWelcomeGreeting(null);
   };
 
   const updateUser = (user) => {
@@ -66,6 +68,8 @@ export function AuthProvider({ children }) {
     login,
     logout,
     updateUser,
+    welcomeGreeting,
+    clearWelcomeGreeting,
   };
 
   return (

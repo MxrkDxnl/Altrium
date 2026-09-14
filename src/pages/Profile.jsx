@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useState, useRef } from 'react';
+import { useAuth } from '../context/useAuth';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import api from '../api';
+import api, { getUploadUrl } from '../api';
 
 // SVG Icons (replacing lucide-react to avoid npm install locks)
 const PencilIcon = ({ className }) => (
@@ -67,8 +67,8 @@ export default function Profile() {
   const fileInputRef = useRef(null);
   
   const initial = currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U';
-  const roleDisplay = currentUser?.role?.replace('_', ' ') || 'Employee';
-  const employeeId = `ALT-${currentUser?.id || Math.floor(Math.random() * 9000) + 1000}`;
+  const roleDisplay = currentUser?.role?.replace(/_/g, ' ') || 'Employee';
+  const employeeId = `ALT-${currentUser?.id ? String(currentUser.id).padStart(4, '0') : '0000'}`;
   
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
@@ -132,11 +132,11 @@ export default function Profile() {
     }
   };
 
-  const avatarSrc = preview || (currentUser?.profile_picture ? `http://localhost:5001${currentUser.profile_picture}` : null);
+  const avatarSrc = preview || getUploadUrl(currentUser?.profile_picture);
 
   return (
-    <div className="max-w-4xl relative">
-      <div className="mb-6">
+    <div className="w-full space-y-6 pb-12">
+      <div>
         <h1 className="text-3xl font-bold text-gray-900 leading-tight">My Profile</h1>
       </div>
 

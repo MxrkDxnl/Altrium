@@ -1,33 +1,55 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/useAuth';
 
-export default function Sidebar() {
+export default function Sidebar({ onNavigate }) {
   const { currentUser } = useAuth();
+  const location = useLocation();
   const role = currentUser?.role || 'employee';
 
   const navLinks = {
     employee: [
-      { name: 'Home', path: '/' },
+      { name: 'Dashboard', path: '/' },
       { name: 'My Tasks', path: '/my-tasks' },
+      ...((currentUser?.department === 'Human Resources' || currentUser?.department === 'HR') && currentUser?.report_portfolio
+        ? [{ name: 'Department Reports', path: '/department-reports', matchPaths: ['/department-reports', '/reports'] }]
+        : []),
+      { name: 'History', path: '/history', matchPaths: ['/history', '/past-records', '/my-development'] },
       { name: 'Profile Page', path: '/profile' },
     ],
     team_manager: [
-      { name: 'Home', path: '/' },
+      { name: 'Dashboard', path: '/' },
       { name: 'My Tasks', path: '/my-tasks' },
-      { name: 'Assign Tasks', path: '/assign-tasks' },
+      { name: 'Assign Reviews', path: '/assign-tasks', matchPaths: ['/assign-tasks', '/assign-reviews'] },
+      { name: 'Assign PIP / PDP', path: '/assign-plan', matchPaths: ['/assign-plan', '/assign-pip-pdp'] },
       { name: 'Review Table', path: '/review-table' },
+      { name: 'Assigned Plans', path: '/assigned-plans', matchPaths: ['/assigned-plans', '/pip-pdp-table'] },
+      { name: 'History', path: '/history', matchPaths: ['/history', '/past-records', '/my-development'] },
       { name: 'Profile Page', path: '/profile' },
     ],
     department_manager: [
-      { name: 'Home', path: '/' },
-      { name: 'Assign Tasks', path: '/assign-tasks' },
+      { name: 'Dashboard', path: '/' },
+      { name: 'My Tasks', path: '/my-tasks' },
+      { name: 'Assign Reviews', path: '/assign-tasks', matchPaths: ['/assign-tasks', '/assign-reviews'] },
+      { name: 'Assign PIP / PDP', path: '/assign-plan', matchPaths: ['/assign-plan', '/assign-pip-pdp'] },
+      { name: 'Department Reports', path: '/department-reports', matchPaths: ['/department-reports', '/reports'] },
       { name: 'Review Table', path: '/review-table' },
+      { name: 'Assigned Plans', path: '/assigned-plans', matchPaths: ['/assigned-plans', '/pip-pdp-table'] },
+      { name: 'History', path: '/history', matchPaths: ['/history', '/past-records', '/my-development'] },
       { name: 'Profile Page', path: '/profile' },
     ],
     hr_manager: [
-      { name: 'Home', path: '/' },
-      { name: 'Company Archive', path: '/company-archive' },
+      { name: 'Dashboard', path: '/' },
+      { name: 'My Tasks', path: '/my-tasks' },
+      { name: 'Assign Reviews', path: '/assign-tasks', matchPaths: ['/assign-tasks', '/assign-reviews'] },
+      { name: 'History', path: '/history', matchPaths: ['/history', '/company-archive', '/past-records'] },
+      { name: 'Profile Page', path: '/profile' },
+    ],
+    company_manager: [
+      { name: 'Dashboard', path: '/' },
+      { name: 'Assign Reviews', path: '/assign-tasks', matchPaths: ['/assign-tasks', '/assign-reviews'] },
+      { name: 'Assign PIP / PDP', path: '/assign-plan', matchPaths: ['/assign-plan', '/assign-pip-pdp'] },
+      { name: 'Assigned Plans', path: '/assigned-plans', matchPaths: ['/assigned-plans', '/pip-pdp-table'] },
+      { name: 'History', path: '/history', matchPaths: ['/history', '/company-archive', '/past-records'] },
       { name: 'Profile Page', path: '/profile' },
     ]
   };
@@ -36,27 +58,29 @@ export default function Sidebar() {
 
   return (
     <div className="h-full py-6 flex flex-col">
-      {/* Spacer for TopNavbar alignment if needed, but usually logo is in topnav. 
-          In the design, the logo is actually in the top left, spanning the sidebar area. 
-          We'll add a placeholder block or let the TopNav handle it. */}
-      <div className="h-16 hidden">Logo Space</div> 
-      
-      <nav className="flex-1 px-4 space-y-2 mt-8">
-        {links.map((link) => (
-          <NavLink
-            key={link.name}
-            to={link.path}
-            className={({ isActive }) =>
-              `block px-4 py-3 rounded-md transition-colors ${
-                isActive
-                  ? 'bg-amber-500 text-black font-medium'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`
-            }
-          >
-            {link.name}
-          </NavLink>
-        ))}
+      <nav className="flex-1 px-4 space-y-2 mt-4 md:mt-8">
+        {links.map((link) => {
+          const isCurrentActive = link.matchPaths
+            ? link.matchPaths.includes(location.pathname)
+            : location.pathname === link.path;
+
+          return (
+            <NavLink
+              key={link.name}
+              to={link.path}
+              onClick={() => onNavigate && onNavigate()}
+              className={() =>
+                `block px-4 py-3 rounded-md transition-colors ${
+                  isCurrentActive
+                    ? 'bg-amber-500 text-black font-medium'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                }`
+              }
+            >
+              {link.name}
+            </NavLink>
+          );
+        })}
       </nav>
     </div>
   );

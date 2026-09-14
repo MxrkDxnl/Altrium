@@ -26,3 +26,22 @@ dist-ssr
 backend/node_modules/
 backend/.env
 backend/uploads/
+backend/storage/
+backend/backups/
+
+# Local database, environment files, and scratch
+.local/
+.local
+.env
+.env.*
+*.env
+scratch/
+backend/scripts/
+backups/
+storage/
+
+
+
+
+# Vercel local project metadata
+.vercel/

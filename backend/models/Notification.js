@@ -15,6 +15,18 @@ const Notification = sequelize.define('Notification', {
   is_read: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
+  },
+  link: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  entity_type: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+  },
+  entity_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
   }
 }, {
   timestamps: true,

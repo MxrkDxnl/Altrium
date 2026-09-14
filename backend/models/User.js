@@ -21,7 +21,7 @@ const User = sequelize.define('User', {
     allowNull: false,
   },
   role: {
-    type: DataTypes.ENUM('hr_manager', 'department_manager', 'team_manager', 'employee'),
+    type: DataTypes.ENUM('company_manager', 'hr_manager', 'department_manager', 'team_manager', 'employee'),
     allowNull: false,
   },
   department: {
@@ -32,8 +32,12 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  report_portfolio: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   quarter_batch: {
-    type: DataTypes.ENUM('Q1', 'Q2', 'Q3', 'Q4'),
+    type: DataTypes.ENUM('Q1', 'Q2', 'Q3', 'Q4', 'ALL'),
     allowNull: true,
   },
   manager_id: {

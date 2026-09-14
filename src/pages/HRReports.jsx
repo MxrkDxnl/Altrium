@@ -12,8 +12,8 @@ export default function HRReports() {
   ];
 
   return (
-    <div className="max-w-5xl">
-      <div className="mb-6">
+    <div className="w-full space-y-6 pb-12">
+      <div>
         <p className="text-xs font-bold text-amber-600 tracking-wider uppercase mb-1">HR MANAGER • Q2 FY 2026</p>
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-semibold text-gray-900">Department reports</h1>

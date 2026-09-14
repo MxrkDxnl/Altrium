@@ -1,33 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import InfoAlert from '../components/ui/InfoAlert';
-import StatusBadge from '../components/ui/StatusBadge';
 import Button from '../components/ui/Button';
-import { useAuth } from '../context/AuthContext';
 import api from '../api';
 
 export default function ReviewRecords() {
-  const { currentUser } = useAuth();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedReview, setSelectedReview] = useState(null);
 
   useEffect(() => {
-    fetchReviews();
+    let active = true;
+    api.get('/reviews/subordinates')
+      .then(res => {
+        if (active) setReviews(res.data);
+      })
+      .catch(err => {
+        if (active) {
+          console.error(err);
+          setError('Failed to fetch reviews');
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
   }, []);
-
-  const fetchReviews = async () => {
-    try {
-      const res = await api.get('/reviews/subordinates');
-      setReviews(res.data);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to fetch reviews');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const parseContent = (content) => {
     if (!content) return {};
@@ -38,11 +37,11 @@ export default function ReviewRecords() {
   };
 
   return (
-    <div className="max-w-5xl relative">
-      <div className="mb-6 flex justify-between items-start">
+    <div className="w-full space-y-6 pb-12">
+      <div className="flex justify-between items-start">
         <div>
           <p className="text-xs font-bold text-amber-600 tracking-wider uppercase mb-1">MANAGER VIEW ONLY</p>
-          <h1 className="text-3xl font-semibold text-gray-900 leading-tight w-2/3">Self & peer review records</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 leading-tight">Self & peer review records</h1>
         </div>
       </div>
 
@@ -63,7 +62,7 @@ export default function ReviewRecords() {
             <p className="text-gray-500 text-lg">No recent feedback available</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="-mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
@@ -80,7 +79,7 @@ export default function ReviewRecords() {
                   <tr key={review.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{review.reviewee?.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{review.reviewer?.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{review.Task?.type === 'self_review' ? 'Self Review' : 'Peer Review'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{review.Task?.type === 'self_review' ? 'Self Review' : (review.Task?.type === 'upward_review' ? 'Upward Feedback' : 'Peer Review')}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{review.Task?.quarter} {review.Task?.year}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(review.submitted_at).toLocaleDateString()}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -100,7 +99,7 @@ export default function ReviewRecords() {
           <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
             <h2 className="text-2xl font-bold mb-1 text-gray-900">Review Details</h2>
             <p className="text-sm text-gray-500 mb-6 border-b border-gray-100 pb-4">
-              {selectedReview.Task?.type === 'self_review' ? 'Self Review' : 'Peer Review'} for <span className="font-semibold text-gray-700">{selectedReview.reviewee?.name}</span> (Written by: <span className="font-semibold text-gray-700">{selectedReview.reviewer?.name}</span>)
+              {selectedReview.Task?.type === 'self_review' ? 'Self Review' : (selectedReview.Task?.type === 'upward_review' ? 'Upward Feedback' : 'Peer Review')} for <span className="font-semibold text-gray-700">{selectedReview.reviewee?.name}</span> (Written by: <span className="font-semibold text-gray-700">{selectedReview.reviewer?.name}</span>)
             </p>
             <div className="space-y-5">
               <div>

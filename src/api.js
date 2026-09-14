@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5001/api'),
   headers: {
     'Content-Type': 'application/json'
   }
@@ -21,4 +21,11 @@ api.interceptors.request.use(
   }
 );
 
+
+// Resolve uploaded images against the same server used for API requests.
+export function getUploadUrl(filePath) {
+  if (!filePath) return null;
+  const apiUrl = new URL(api.defaults.baseURL, window.location.origin);
+  return new URL(filePath, apiUrl.origin).href;
+}
 export default api;

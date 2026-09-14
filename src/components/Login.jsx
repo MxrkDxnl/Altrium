@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/useAuth';
 import AltriumLogo from './ui/AltriumLogo';
 import Button from './ui/Button';
 
 export default function Login() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -23,10 +25,11 @@ export default function Login() {
     const result = await login(email, password);
     setLoading(false);
 
-    if (!result.success) {
+    if (result.success) {
+      navigate('/', { replace: true });
+    } else {
       setError(result.message || 'Invalid email or password');
     }
-    // AuthContext and App.jsx handle the redirect when currentUser is set
   };
 
   return (

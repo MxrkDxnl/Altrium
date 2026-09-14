@@ -28,10 +28,17 @@ router.post('/login', async (req, res) => {
       email: user.email,
       department: user.department,
       team: user.team,
+      report_portfolio: user.report_portfolio,
+      quarter_batch: user.quarter_batch,
       profile_picture: user.profile_picture
     };
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET || 'secret_key', { expiresIn: '1d' });
+    if (!process.env.JWT_SECRET) {
+      console.error('FATAL: JWT_SECRET is not configured in environment.');
+      return res.status(500).json({ message: 'Server configuration error' });
+    }
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
 
     res.json({ token, user: payload });
   } catch (err) {

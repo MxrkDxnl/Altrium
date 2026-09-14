@@ -1,0 +1,17 @@
+.git/
+.local/
+.tempmediaStorage/
+.vercel/
+node_modules/
+dist/
+backend/
+database/
+scratch/
+sample_evidence_files/
+sample_reports/
+.env
+.env.*
+*.env
+*.log
+*.sql
+*.md

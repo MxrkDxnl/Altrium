@@ -8,8 +8,8 @@ export default function InfoAlert({ title, children, variant = 'green' }) {
 
   return (
     <div className={`${bgColors[variant]} rounded-lg p-6 mb-6 shadow-sm border border-gray-100`}>
-      {title && <h3 className="font-semibold text-gray-800 mb-2">{title}</h3>}
-      <div className="text-gray-600 text-sm leading-relaxed">
+      {title && <p className="font-bold text-gray-900 mb-1.5 text-sm">{title}</p>}
+      <div className="text-gray-700 text-sm leading-relaxed">
         {children}
       </div>
     </div>
