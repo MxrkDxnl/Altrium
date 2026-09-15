@@ -1,17 +1,3 @@
--- =============================================================================
--- Altrium Performance Tracker - Shareable Demonstration Dataset
---
--- NOTICE: Contains ONLY fictional organization data and sanitized accounts.
--- Default Demonstration Password for all accounts: 'DemoPassword123!'
---
--- Workflows Included:
---   - Approved 3-tier hierarchy (Company Manager -> Dept Heads -> Team Mgrs -> Employees)
---   - Company Manager PIP / PDP assignment to direct department heads (Dinesh, Chamari, Amaya)
---   - Team Manager plan assignments & review cycles
---   - Sample evidence deliverables & append-only manager feedback
---   - Department summary reports with multi-revision tracking (IT Rev 1 & 2, Finance Rev 1)
---   - Deep-linked notifications & task tracking
--- =============================================================================
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -116,7 +102,7 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `department`, `t
   (94, 'Nethmi Silva', 'nethmi.hr@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'employee', 'Human Resources', 'HR', NULL, 'ALL', 1, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00');
 
 -- -----------------------------------------------------------------------------
--- 2. Seed: plans (Demonstrating Company Manager & Team Manager Workflows)
+-- 2. Seed: plans 
 -- -----------------------------------------------------------------------------
 INSERT INTO `plans` (`id`, `type`, `title`, `description`, `manager_id`, `recipient_id`, `quarter`, `year`, `due_date`, `status`, `createdAt`, `updatedAt`) VALUES
   (1, 'PDP', 'Executive Engineering Governance & System Resiliency Roadmap', 'Establish high-fidelity continuous delivery standards and executive cross-departmental alignment for the IT division over the next 12 months.', 91, 2, 'Q3', 2026, NULL, 'completed', '2026-09-09 10:00:00', '2026-09-12 12:00:00'),
@@ -126,7 +112,7 @@ INSERT INTO `plans` (`id`, `type`, `title`, `description`, `manager_id`, `recipi
   (5, 'PDP', 'Cloud Infrastructure & Architecture Development Plan', 'Prepare a cloud architecture learning plan and upload separate milestone documents showing your progress.', 2, 4, 'Q3', 2026, NULL, 'completed', '2026-09-10 18:50:27', '2026-09-10 18:55:15');
 
 -- -----------------------------------------------------------------------------
--- 3. Seed: evidence (Linked Deliverables in demo_storage/evidence/)
+-- 3. Seed: evidence 
 -- -----------------------------------------------------------------------------
 INSERT INTO `evidence` (`id`, `plan_id`, `recipient_id`, `file_path`, `original_filename`, `file_size`, `mime_type`, `note`, `idempotency_key`, `payload_hash`, `submitted_at`, `createdAt`, `updatedAt`) VALUES
   (1, 1, 2, 'evidence-demo-arch-blueprint.png', 'Executive_Architecture_Roadmap.png', 57303, 'image/png', 'Submitted executive engineering architecture roadmap and continuous delivery framework deliverables.', 'demo_idempotency_ev_1', 'demo_hash_ev_1', '2026-09-11 11:30:00', '2026-09-11 11:30:00', '2026-09-11 11:30:00'),
@@ -134,14 +120,14 @@ INSERT INTO `evidence` (`id`, `plan_id`, `recipient_id`, `file_path`, `original_
   (3, 5, 4, 'evidence-demo-project-deliverables.docx', 'Engineering_Governance_Framework.docx', 3005, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Cloud infrastructure milestone specifications and governance blueprints.', 'demo_idempotency_ev_3', 'demo_hash_ev_3', '2026-09-10 18:52:00', '2026-09-10 18:52:00', '2026-09-10 18:52:00');
 
 -- -----------------------------------------------------------------------------
--- 4. Seed: evidence_feedback (Append-only Manager Feedback)
+-- 4. Seed: evidence_feedback 
 -- -----------------------------------------------------------------------------
 INSERT INTO `evidence_feedback` (`id`, `evidence_id`, `plan_id`, `manager_id`, `feedback_text`, `idempotency_key`, `createdAt`, `updatedAt`) VALUES
   (1, 1, 1, 91, 'Excellent architectural roadmap. Ensure the cross-department rollout schedule is aligned with Finance operations.', 'demo_fb_key_1', '2026-09-11 14:00:00', '2026-09-11 14:00:00'),
   (2, 3, 5, 2, 'Great cloud architecture milestones. Proceed with the automated provisioning pipeline.', 'demo_fb_key_2', '2026-09-10 18:54:00', '2026-09-10 18:54:00');
 
 -- -----------------------------------------------------------------------------
--- 5. Seed: department_reports (Multi-Revision Tracking)
+-- 5. Seed: department_reports 
 -- -----------------------------------------------------------------------------
 INSERT INTO `department_reports` (`id`, `department`, `quarter`, `year`, `title`, `reviews_summary`, `pip_summary`, `pdp_summary`, `author_id`, `recipient_id`, `file_path`, `original_filename`, `file_size`, `mime_type`, `revision_number`, `revision_notes`, `is_latest`, `parent_report_id`, `submission_key`, `payload_hash`, `submitted_at`, `createdAt`, `updatedAt`) VALUES
   (1, 'IT', 'Q3', 2026, 'IT Department Q3 2026 Performance Summary Report', 'Overview of IT department performance reviews across all 5 engineering teams.', '1 active PIP in Software Development team under active remediation.', '1 active PDP on executive engineering governance.', 2, 92, 'report-demo-it-q3-rev1.pdf', 'IT_Q3_2026_Department_Summary.pdf', 1596, 'application/pdf', 1, 'Initial submission of Q3 department summary report.', 0, NULL, 'demo_sub_key_rep_1', 'demo_hash_rep_1', '2026-09-11 16:00:00', '2026-09-11 16:00:00', '2026-09-12 09:00:00'),
@@ -149,7 +135,7 @@ INSERT INTO `department_reports` (`id`, `department`, `quarter`, `year`, `title`
   (3, 'Finance', 'Q3', 2026, 'Finance Department Q3 2026 Summary Report', 'Summary of financial analysis and accounting teams review progress.', 'Zero active PIPs in Finance division.', '1 ongoing corporate financial automation PDP.', 3, 93, 'report-demo-finance-q3-rev1.xlsx', 'Finance_Q3_2026_Department_Summary.xlsx', 2323, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 1, 'Initial Q3 fiscal summary submission.', 1, NULL, 'demo_sub_key_rep_3', 'demo_hash_rep_3', '2026-09-11 17:30:00', '2026-09-11 17:30:00', '2026-09-11 17:30:00');
 
 -- -----------------------------------------------------------------------------
--- 6. Seed: tasks (Review & Plan Action Items)
+-- 6. Seed: tasks 
 -- -----------------------------------------------------------------------------
 INSERT INTO `tasks` (`id`, `type`, `feedback_type`, `status`, `quarter`, `year`, `message`, `assignee_id`, `reviewee_id`, `plan_id`, `group_subject_ids`, `draft_content`, `submission_key`, `payload_hash`, `createdAt`, `updatedAt`) VALUES
   (1, 'self_review', 'self', 'completed', 'Q3', 2026, 'Complete your Q3 self evaluation', 21, 21, NULL, NULL, NULL, 'demo_task_key_1', 'demo_task_hash_1', '2026-09-08 20:00:00', '2026-09-08 20:14:51'),
@@ -164,13 +150,13 @@ INSERT INTO `tasks` (`id`, `type`, `feedback_type`, `status`, `quarter`, `year`,
   (10, 'pdp', NULL, 'pending', 'Q3', 2026, 'Professional Development Plan: Corporate Financial Strategy', 3, NULL, 3, NULL, NULL, 'demo_task_key_10', 'demo_task_hash_10', '2026-09-11 09:00:00', '2026-09-11 09:00:00');
 
 -- -----------------------------------------------------------------------------
--- 7. Seed: reviews (Completed Review Records)
+-- 7. Seed: reviews 
 -- -----------------------------------------------------------------------------
 INSERT INTO `reviews` (`id`, `content`, `submitted_at`, `task_id`, `reviewer_id`, `reviewee_id`, `createdAt`, `updatedAt`) VALUES
   (1, '{"techSkills": "Exceeds Expectations", "techNotes": "Successfully delivered full-stack microservices migration on schedule.", "commRating": "Meets Expectations", "commNotes": "Maintains clear cross-team communication.", "growthAreas": "Continue mentoring junior engineers on testing best practices."}', '2026-09-08 20:14:51', 1, 21, 21, '2026-09-08 20:14:51', '2026-09-08 20:14:51');
 
 -- -----------------------------------------------------------------------------
--- 8. Seed: notifications (Sample Deep-Linked Notifications)
+-- 8. Seed: notifications 
 -- -----------------------------------------------------------------------------
 INSERT INTO `notifications` (`id`, `message`, `is_read`, `link`, `entity_type`, `entity_id`, `user_id`, `createdAt`, `updatedAt`) VALUES
   (1, 'Anura Senaratne has assigned you a Professional Development Plan (PDP).', 1, '/my-tasks', 'plan', 1, 2, '2026-09-09 10:00:00', '2026-09-09 10:05:00'),
@@ -182,6 +168,4 @@ INSERT INTO `notifications` (`id`, `message`, `is_read`, `link`, `entity_type`, 
 
 SET FOREIGN_KEY_CHECKS = 1;
 
--- =============================================================================
--- End of Demonstration Seed
--- =============================================================================
+

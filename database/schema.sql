@@ -1,19 +1,3 @@
--- =============================================================================
--- Altrium Performance Tracker - Complete Portable Database Schema
--- Compatible with MySQL 8.0+ / MariaDB 10.5+
---
--- Features:
---   - Role-based hierarchy (Company Manager, HR Manager, Dept Managers, Team Managers, Employees)
---   - Performance Reviews (Self, Peer, Upward, Downward, Batch & Draft Support)
---   - Performance Improvement Plans (PIP) & Professional Development Plans (PDP)
---   - Plan Evidence Submissions with Idempotency & Validation Metadata
---   - Append-only Manager Feedback
---   - Department Summary Reports with Versioning & Multi-Revision Tracking
---   - Notifications & Real-Time Deep Links
---
--- NOTE: This file is parameterizable and does NOT include hardcoded database creation
---       or 'USE database_name;' statements to prevent accidental overwrites.
--- =============================================================================
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -233,6 +217,4 @@ CREATE TABLE `notifications` (
 
 SET FOREIGN_KEY_CHECKS = 1;
 
--- =============================================================================
--- End of Schema Definition
--- =============================================================================
+
