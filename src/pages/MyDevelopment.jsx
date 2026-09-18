@@ -28,7 +28,7 @@ export default function MyDevelopment() {
               </span>
               <div className="text-right">
                 <span className="text-xs text-gray-500 uppercase font-semibold">Complete by</span>
-                <p className="text-sm font-bold text-gray-900">Q4 • FY 2026</p>
+                <p className="text-sm font-bold text-gray-900">Q3 • FY 2026</p>
               </div>
             </div>
             

@@ -6,7 +6,7 @@ export default function PastRecords() {
   const mockRecords = [
     { year: 'FY 2025', quarter: 'Q2', type: 'Self Review', title: 'Q2 Self Assessment', status: 'Completed', score: 'Meets Expectations' },
     { year: 'FY 2025', quarter: 'Q2', type: 'Peer Review', title: 'Review by Manager', status: 'Completed', score: 'Exceeds Expectations' },
-    { year: 'FY 2024', quarter: 'Q4', type: 'PDP', title: 'Leadership Workshop', status: 'Completed', score: 'N/A' },
+    { year: 'FY 2024', quarter: 'Q3', type: 'PDP', title: 'Leadership Workshop', status: 'Completed', score: 'N/A' },
   ];
 
   return (
