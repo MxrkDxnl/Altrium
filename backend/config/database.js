@@ -1,5 +1,6 @@
 const { Sequelize } = require('sequelize');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const dbUrl = process.env.DATABASE_URL ||
@@ -8,20 +9,37 @@ const dbUrl = process.env.DATABASE_URL ||
   process.env.MYSQL_PUBLIC_URL;
 
 const host = process.env.DB_HOST || process.env.MYSQLHOST || process.env.MYSQL_HOST || 'localhost';
+
+// Determine if connecting to Aiven / Cloud MySQL requiring TLS
 const isCloudHost = (host && (host.includes('aivencloud.com') || host.includes('rlwy.net'))) ||
                     (dbUrl && (dbUrl.includes('aivencloud.com') || dbUrl.includes('rlwy.net') || dbUrl.includes('ssl-mode=REQUIRED') || dbUrl.includes('ssl=true')));
 
 const isCloudSsl = process.env.DB_SSL === 'true' || isCloudHost;
+
+// Load CA certificate for strictly verified TLS
+let caCert = null;
+if (process.env.DB_CA_CERT) {
+  caCert = process.env.DB_CA_CERT;
+} else if (process.env.DB_CA_FILE && fs.existsSync(process.env.DB_CA_FILE)) {
+  caCert = fs.readFileSync(process.env.DB_CA_FILE, 'utf8');
+} else {
+  const defaultCaPath = path.resolve(__dirname, '../certs/aiven-ca.pem');
+  if (fs.existsSync(defaultCaPath)) {
+    caCert = fs.readFileSync(defaultCaPath, 'utf8');
+  }
+}
+
 const sslConfig = isCloudSsl ? {
   require: true,
-  rejectUnauthorized: false
+  rejectUnauthorized: !!caCert,
+  ca: caCert || undefined
 } : false;
 
 let sequelize;
 
 if (dbUrl) {
   const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ':****@');
-  console.log(`[DB] Connecting to MySQL using connection string: ${maskedUrl}`);
+  console.log(`[DB] Connecting to MySQL using connection string: ${maskedUrl} (TLS Verified: ${!!caCert})`);
   sequelize = new Sequelize(dbUrl, {
     dialect: 'mysql',
     logging: false,
@@ -33,7 +51,7 @@ if (dbUrl) {
   const password = process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || process.env.MYSQL_PASSWORD || '';
   const database = process.env.DB_NAME || process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE || 'railway';
 
-  console.log(`[DB] Connecting to MySQL at ${host}:${port}/${database} as user '${user}' (SSL: ${isCloudSsl ? 'ENABLED' : 'DISABLED'})...`);
+  console.log(`[DB] Connecting to MySQL at ${host}:${port}/${database} as user '${user}' (TLS Verified: ${!!caCert})...`);
 
   sequelize = new Sequelize(database, user, password, {
     host,
