@@ -75,8 +75,13 @@ export default function Profile() {
   const employeeId = `ALT-${currentUser?.id ? String(currentUser.id).padStart(4, '0') : '0000'}`;
   
   const handleFileChange = (e) => {
-    const selected = e.target.files[0];
+    const selected = e.target.files?.[0];
     if (selected) {
+      if (selected.size > 5 * 1024 * 1024) {
+        setError('Image file must be under 5MB.');
+        return;
+      }
+      setError('');
       setFile(selected);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -92,6 +97,11 @@ export default function Profile() {
 
     if (password && password !== confirmPassword) {
       setError('Passwords do not match');
+      return;
+    }
+
+    if (password && password.length < 6) {
+      setError('New password must be at least 6 characters');
       return;
     }
 
@@ -116,8 +126,9 @@ export default function Profile() {
         setSuccess('');
       }, 1500);
     } catch (err) {
-      console.error(err);
-      setError('Failed to update profile');
+      console.error('Failed to update profile:', err);
+      const serverMsg = err.response?.data?.message || (typeof err.response?.data === 'string' ? err.response?.data : null);
+      setError(serverMsg || 'Failed to update profile');
     } finally {
       setSaving(false);
     }
@@ -129,10 +140,12 @@ export default function Profile() {
       updateUser(res.data);
       setPreview(null);
       setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setSuccess('Profile picture removed successfully');
     } catch (err) {
-      console.error(err);
-      setError('Failed to remove profile picture');
+      console.error('Failed to remove profile picture:', err);
+      const serverMsg = err.response?.data?.message || (typeof err.response?.data === 'string' ? err.response?.data : null);
+      setError(serverMsg || 'Failed to remove profile picture');
     }
   };
 

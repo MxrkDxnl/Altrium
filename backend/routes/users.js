@@ -5,18 +5,38 @@ const auth = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
-// Configure multer for file uploads
+// Configure multer for profile picture uploads with verified absolute directory
+const PROFILES_STORAGE_DIR = path.resolve(__dirname, '../uploads/profiles');
+if (!fs.existsSync(PROFILES_STORAGE_DIR)) {
+  fs.mkdirSync(PROFILES_STORAGE_DIR, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/profiles/');
+    if (!fs.existsSync(PROFILES_STORAGE_DIR)) {
+      fs.mkdirSync(PROFILES_STORAGE_DIR, { recursive: true });
+    }
+    cb(null, PROFILES_STORAGE_DIR);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, req.user.id + '-' + uniqueSuffix + path.extname(file.originalname));
+    cb(null, req.user.id + '-' + uniqueSuffix + path.extname(file.originalname).toLowerCase());
   }
 });
-const upload = multer({ storage: storage });
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
+      return cb(new Error('Only image files (PNG, JPG, JPEG, WEBP) are allowed.'));
+    }
+    cb(null, true);
+  }
+});
 
 // GET /api/users/me
 // Get current user profile
@@ -656,17 +676,42 @@ router.get('/eligible', auth, async (req, res) => {
 
 // PUT /api/users/profile
 // Update user profile (password and profile picture)
-router.put('/profile', auth, upload.single('profile_picture'), async (req, res) => {
+router.put('/profile', auth, (req, res, next) => {
+  upload.single('profile_picture')(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ message: 'Profile picture must be under 5MB.' });
+        }
+        return res.status(400).json({ message: `Upload error: ${err.message}` });
+      }
+      return res.status(400).json({ message: err.message || 'Invalid image upload' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const { password } = req.body;
     const updateData = {};
 
-    if (password) {
+    if (password && password.trim() !== '') {
+      if (password.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+      }
       const salt = await bcrypt.genSalt(10);
       updateData.password = await bcrypt.hash(password, salt);
     }
 
     if (req.file) {
+      // Clean up previous profile picture file if exists
+      const currentUser = await User.findByPk(req.user.id);
+      if (currentUser && currentUser.profile_picture && currentUser.profile_picture.startsWith('/uploads/profiles/')) {
+        const oldFilename = path.basename(currentUser.profile_picture);
+        const oldPath = path.join(PROFILES_STORAGE_DIR, oldFilename);
+        if (fs.existsSync(oldPath)) {
+          try { fs.unlinkSync(oldPath); } catch (_e) {}
+        }
+      }
       updateData.profile_picture = `/uploads/profiles/${req.file.filename}`;
     }
 
@@ -680,8 +725,8 @@ router.put('/profile', auth, upload.single('profile_picture'), async (req, res) 
 
     res.json(updatedUser);
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error updating profile');
+    console.error('Error updating profile:', err);
+    res.status(500).json({ message: 'Server error updating profile' });
   }
 });
 
@@ -689,6 +734,15 @@ router.put('/profile', auth, upload.single('profile_picture'), async (req, res) 
 // Remove user profile picture
 router.delete('/profile-picture', auth, async (req, res) => {
   try {
+    const currentUser = await User.findByPk(req.user.id);
+    if (currentUser && currentUser.profile_picture && currentUser.profile_picture.startsWith('/uploads/profiles/')) {
+      const oldFilename = path.basename(currentUser.profile_picture);
+      const oldPath = path.join(PROFILES_STORAGE_DIR, oldFilename);
+      if (fs.existsSync(oldPath)) {
+        try { fs.unlinkSync(oldPath); } catch (_e) {}
+      }
+    }
+
     await User.update({ profile_picture: null }, { where: { id: req.user.id } });
     
     const updatedUser = await User.findByPk(req.user.id, {
@@ -697,8 +751,8 @@ router.delete('/profile-picture', auth, async (req, res) => {
 
     res.json(updatedUser);
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error deleting profile picture');
+    console.error('Error deleting profile picture:', err);
+    res.status(500).json({ message: 'Server error deleting profile picture' });
   }
 });
 

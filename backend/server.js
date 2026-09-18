@@ -18,6 +18,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 const path = require('path');
+const fs = require('fs');
+
+const uploadsDir = path.join(__dirname, 'uploads', 'profiles');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
