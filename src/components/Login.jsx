@@ -21,6 +21,11 @@ export default function Login() {
       return;
     }
 
+    if (password.length < 8) {
+      setError('Password must contain 8-12 characters.');
+      return;
+    }
+
     setLoading(true);
     const result = await login(email, password);
     setLoading(false);
