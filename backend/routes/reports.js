@@ -53,7 +53,8 @@ router.get('/recipient-preview', auth, async (req, res) => {
       return res.status(403).json({ message: 'Only Department Managers can submit or preview department reports.' });
     }
 
-    if (!manager.department || !['IT', 'Finance'].includes(manager.department)) {
+    const dept = manager.department ? manager.department.trim() : '';
+    if (!dept || !['IT', 'Finance'].includes(dept)) {
       return res.status(403).json({ message: 'Only IT and Finance Department Managers can submit department reports.' });
     }
 
@@ -136,7 +137,8 @@ router.post('/', auth, handleReportUpload, async (req, res) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    if (manager.role !== 'department_manager' || !['IT', 'Finance'].includes(manager.department)) {
+    const dept = manager.department ? manager.department.trim() : '';
+    if (manager.role !== 'department_manager' || !['IT', 'Finance'].includes(dept)) {
       cleanupUploadedFile();
       return res.status(403).json({ message: 'Only IT and Finance Department Managers can submit department summary reports.' });
     }

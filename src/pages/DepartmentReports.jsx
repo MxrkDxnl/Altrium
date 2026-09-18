@@ -86,8 +86,12 @@ export default function DepartmentReports() {
     };
   }, [loadData]);
 
-  // Open Form for New Report
+  // Open Form for New Report or Revision if already exists
   const handleOpenNewReport = () => {
+    if (previewData?.existingReport) {
+      handleOpenRevision(previewData.existingReport);
+      return;
+    }
     setIsRevisionMode(false);
     setParentReportId(null);
     setTitle(`${previewData?.department || currentUser?.department || 'Department'} Performance & Capability Summary (${previewData?.quarter || 'Q3'} ${previewData?.year || '2026'})`);
@@ -250,10 +254,10 @@ export default function DepartmentReports() {
           </span>
           {isDeptManager && !showForm && (
             <Button
-              onClick={handleOpenNewReport}
+              onClick={previewData?.existingReport ? () => handleOpenRevision(previewData.existingReport) : handleOpenNewReport}
               className="bg-amber-500 hover:bg-amber-600 text-black font-semibold text-sm px-4 py-2"
             >
-              + Create Department Report
+              {previewData?.existingReport ? '+ Submit Revision' : '+ Create Department Report'}
             </Button>
           )}
         </div>
