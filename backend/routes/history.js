@@ -53,13 +53,13 @@ function normalizeScope(scopeQuery) {
 /**
  * Determine if a user has permission to view the broader 'all' authorized history scope.
  * Access is granted to:
- * - Authorized manager roles (team_manager, department_manager, company_manager, hr_manager)
+ * - Authorized manager roles (team_manager, department_manager, operational_manager, hr_manager, admin)
  * - HR employees with a designated report_portfolio (e.g. Ayesha, Ruwan)
  * Ordinary employees without a report portfolio (e.g. Dinesh, Nethmi) are restricted to 'personal'.
  */
 function canAccessAllAuthorizedRecords(user) {
   if (!user) return false;
-  const isManager = ['team_manager', 'department_manager', 'company_manager', 'hr_manager'].includes(user.role);
+  const isManager = ['team_manager', 'department_manager', 'admin', 'operational_manager', 'hr_manager'].includes(user.role);
   if (isManager) return true;
   const isHrPortfolio = ['Human Resources', 'HR'].includes(user.department) && user.role === 'employee' && Boolean(user.report_portfolio);
   if (isHrPortfolio) return true;
@@ -72,7 +72,7 @@ function canAccessAllAuthorizedRecords(user) {
  * Strictly non-mutating / read-only query.
  */
 async function fetchUserHistoryRecords(user, scope = 'personal') {
-  const isManager = ['team_manager', 'department_manager', 'company_manager', 'hr_manager'].includes(user.role);
+  const isManager = ['team_manager', 'department_manager', 'admin', 'operational_manager', 'hr_manager'].includes(user.role);
   const isDeptManager = user.role === 'department_manager';
   const isHrPortfolio = ['Human Resources', 'HR'].includes(user.department) && user.role === 'employee' && Boolean(user.report_portfolio);
 

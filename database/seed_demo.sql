@@ -96,10 +96,11 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `department`, `t
   (88, 'Shanaka Ekanayake', 'shanaka.ekanayake77@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'employee', 'Finance', 'Finance Operations', NULL, 'Q1', 11, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00'),
   (89, 'Sanath Rodrigo', 'sanath.rodrigo78@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'employee', 'Finance', 'Finance Operations', NULL, 'Q2', 11, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00'),
   (90, 'Dulshan Rajapaksa', 'dulshan.rajapaksa79@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'employee', 'Finance', 'Finance Operations', NULL, 'Q3', 11, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00'),
-  (91, 'Anura Senaratne', 'anura.company@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'company_manager', 'Management', 'Executive', NULL, NULL, NULL, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00'),
-  (92, 'Ayesha Perera', 'ayesha.hr@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'employee', 'Human Resources', 'HR', 'IT', 'ALL', 1, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00'),
-  (93, 'Ruwan Fernando', 'ruwan.hr@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'employee', 'Human Resources', 'HR', 'Finance', 'ALL', 1, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00'),
-  (94, 'Nethmi Silva', 'nethmi.hr@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'employee', 'Human Resources', 'HR', NULL, 'ALL', 1, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00');
+  (91, 'Anura Senaratne', 'anura.company@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'operational_manager', 'Management', 'Executive', NULL, NULL, NULL, 1, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00'),
+  (92, 'Ayesha Perera', 'ayesha.hr@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'employee', 'Human Resources', 'HR', 'IT', 'ALL', 1, 1, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00'),
+  (93, 'Ruwan Fernando', 'ruwan.hr@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'employee', 'Human Resources', 'HR', 'Finance', 'ALL', 1, 1, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00'),
+  (94, 'Nethmi Silva', 'nethmi.hr@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'employee', 'Human Resources', 'HR', NULL, 'ALL', 1, 1, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00'),
+  (95, 'System Administrator', 'admin@altrium.com', '$2b$10$gHjkNKUK/k7cHQGUo/.0POGfODRdn.hER17aCS/HuFViBo4xDtly6', 'admin', 'Management', 'Administration', NULL, NULL, NULL, 1, NULL, '2026-09-08 00:00:00', '2026-09-12 00:00:00');
 
 -- -----------------------------------------------------------------------------
 -- 2. Seed: plans 

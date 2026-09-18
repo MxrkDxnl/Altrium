@@ -21,7 +21,7 @@ const User = sequelize.define('User', {
     allowNull: false,
   },
   role: {
-    type: DataTypes.ENUM('company_manager', 'hr_manager', 'department_manager', 'team_manager', 'employee'),
+    type: DataTypes.ENUM('admin', 'operational_manager', 'hr_manager', 'department_manager', 'team_manager', 'employee'),
     allowNull: false,
   },
   department: {
@@ -43,6 +43,11 @@ const User = sequelize.define('User', {
   manager_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
+  },
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
   },
   profile_picture: {
     type: DataTypes.STRING,

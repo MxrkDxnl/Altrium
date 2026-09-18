@@ -67,8 +67,11 @@ export default function Home() {
   // Format role label for presentation
   const formatRole = (role) => {
     switch (role) {
+      case 'admin':
+        return 'Administrator';
+      case 'operational_manager':
       case 'company_manager':
-        return 'Company Executive';
+        return 'Operational Manager';
       case 'department_manager':
       case 'hr_manager':
         return (currentUser?.department === 'Human Resources' || currentUser?.department === 'HR')
@@ -86,8 +89,11 @@ export default function Home() {
 
   // Dynamic role-tailored subtitle
   const getDashboardSubtitle = (user) => {
-    if (user?.role === 'company_manager') {
-      return 'Company-wide performance, review progress, and department milestones.';
+    if (user?.role === 'admin') {
+      return 'Organization-wide member administration, role appointments, and account access management.';
+    }
+    if (user?.role === 'operational_manager' || user?.role === 'company_manager') {
+      return 'Organization-wide department health, operational performance, and executive governance.';
     }
     if (user?.role === 'department_manager' || user?.role === 'hr_manager') {
       return 'Department review progress, team performance, and quarterly reports.';
@@ -248,8 +254,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* 7. Needs Attention — Final section for non-company-manager roles where applicable */}
-          {currentUser?.role !== 'company_manager' && (
+          {/* 7. Needs Attention — Final section for non-admin/non-executive roles where applicable */}
+          {currentUser?.role !== 'admin' && currentUser?.role !== 'operational_manager' && currentUser?.role !== 'company_manager' && (
             <div className="w-full">
               <NeedsAttentionSection items={dashboardData?.needsAttention} />
             </div>

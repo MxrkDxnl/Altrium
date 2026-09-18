@@ -67,7 +67,11 @@ export default function Profile() {
   const fileInputRef = useRef(null);
   
   const initial = currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U';
-  const roleDisplay = currentUser?.role?.replace(/_/g, ' ') || 'Employee';
+  const roleDisplay = currentUser?.role === 'admin' 
+    ? 'Administrator'
+    : currentUser?.role === 'operational_manager'
+    ? 'Operational Manager'
+    : (currentUser?.role?.replace(/_/g, ' ') || 'Employee');
   const employeeId = `ALT-${currentUser?.id ? String(currentUser.id).padStart(4, '0') : '0000'}`;
   
   const handleFileChange = (e) => {

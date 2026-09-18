@@ -206,7 +206,7 @@ router.post('/submit', auth, async (req, res) => {
       const assignerId = lockedTask.assigner_id || (reviewer ? reviewer.manager_id : null);
       if (assignerId) {
         const assigner = await User.findByPk(assignerId, { transaction: t });
-        const isReviewTableMgr = assigner && ['team_manager', 'department_manager', 'company_manager'].includes(assigner.role);
+        const isReviewTableMgr = assigner && ['team_manager', 'department_manager', 'operational_manager'].includes(assigner.role);
         await Notification.create({
           user_id: assignerId,
           message: `${reviewer ? reviewer.name : 'A reviewer'} has submitted their assigned review${isGrouped ? 's' : ''}.`,
@@ -236,7 +236,7 @@ router.post('/submit', auth, async (req, res) => {
 // Manager fetches completed reviews for direct reports
 router.get('/subordinates', auth, async (req, res) => {
   try {
-    if (!['team_manager', 'department_manager', 'company_manager'].includes(req.user.role)) {
+    if (!['team_manager', 'department_manager'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 

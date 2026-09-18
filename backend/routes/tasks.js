@@ -34,6 +34,21 @@ function getActiveQuarterAndYear() {
 // Manager assigns a self-review to direct subordinates
 router.post('/assign-self', auth, async (req, res) => {
   try {
+    // 1. Authoritative check: load manager from database
+    const manager = await User.findByPk(req.user.id);
+    if (!manager) {
+      return res.status(401).json({ message: 'Manager account not found' });
+    }
+
+    if (manager.role === 'admin') {
+      return res.status(403).json({ message: 'Administrators are not permitted to assign reviews' });
+    }
+
+    const allowedRoles = ['team_manager', 'department_manager', 'hr_manager', 'operational_manager'];
+    if (!allowedRoles.includes(manager.role)) {
+      return res.status(403).json({ message: 'Only managers can assign self-reviews' });
+    }
+
     const { employeeIds, message, quarter, year } = req.body;
 
     if (!employeeIds || !Array.isArray(employeeIds) || employeeIds.length === 0) {
@@ -48,17 +63,6 @@ router.post('/assign-self', auth, async (req, res) => {
       });
     }
 
-    // 1. Authoritative check: load manager from database
-    const manager = await User.findByPk(req.user.id);
-    if (!manager) {
-      return res.status(401).json({ message: 'Manager account not found' });
-    }
-
-    const allowedRoles = ['team_manager', 'department_manager', 'hr_manager', 'company_manager'];
-    if (!allowedRoles.includes(manager.role)) {
-      return res.status(403).json({ message: 'Only managers can assign self-reviews' });
-    }
-
     // 2. Validate recipients against manager's hierarchy
     const recipients = await User.findAll({
       where: { id: employeeIds }
@@ -68,14 +72,14 @@ router.post('/assign-self', auth, async (req, res) => {
       return res.status(400).json({ message: 'One or more selected recipients were not found' });
     }
 
-    if (manager.role === 'company_manager') {
+    if (manager.role === 'operational_manager') {
       const allDirectDeptHeads = recipients.every(r =>
         r.manager_id === manager.id &&
         ['department_manager', 'hr_manager'].includes(r.role)
       );
       if (!allDirectDeptHeads) {
         return res.status(403).json({
-          message: 'Selected recipients must all be direct Department Heads reporting to the Company Manager'
+          message: 'Selected recipients must all be direct Department Heads reporting to the Operational Manager'
         });
       }
     } else if (manager.role === 'hr_manager') {
@@ -308,6 +312,21 @@ router.get('/:id', auth, async (req, res) => {
 // 3. Direct Reports Review Their Manager (peerType: 'reports_to_manager' — Upward)
 router.post('/assign-peer', auth, async (req, res) => {
   try {
+    // Authoritative manager check
+    const manager = await User.findByPk(req.user.id);
+    if (!manager) {
+      return res.status(401).json({ message: 'Manager account not found' });
+    }
+
+    if (manager.role === 'admin') {
+      return res.status(403).json({ message: 'Administrators are not permitted to assign reviews' });
+    }
+
+    const allowedRoles = ['team_manager', 'department_manager', 'hr_manager', 'operational_manager'];
+    if (!allowedRoles.includes(manager.role)) {
+      return res.status(403).json({ message: 'Only managers can assign reviews' });
+    }
+
     const {
       peerType = 'same_level',
       subjectId: rawSubjectId,
@@ -333,17 +352,6 @@ router.post('/assign-peer', auth, async (req, res) => {
       });
     }
 
-    // Authoritative manager check
-    const manager = await User.findByPk(req.user.id);
-    if (!manager) {
-      return res.status(401).json({ message: 'Manager account not found' });
-    }
-
-    const allowedRoles = ['team_manager', 'department_manager', 'hr_manager', 'company_manager'];
-    if (!allowedRoles.includes(manager.role)) {
-      return res.status(403).json({ message: 'Only managers can assign reviews' });
-    }
-
     const cleanMessage = message && typeof message === 'string' ? message.trim() : null;
 
     // =========================================================================
@@ -351,7 +359,7 @@ router.post('/assign-peer', auth, async (req, res) => {
     // =========================================================================
     if (peerType === 'manager_to_reports') {
       if (manager.role === 'team_manager' || manager.role === 'hr_manager') {
-        return res.status(403).json({ message: 'Only Department Managers and Company Manager can initiate downward reviews' });
+        return res.status(403).json({ message: 'Only Department Managers and Operational Manager can initiate downward reviews' });
       }
 
       let reviewer = null;
@@ -386,7 +394,7 @@ router.post('/assign-peer', auth, async (req, res) => {
           attributes: ['id', 'name', 'email', 'role', 'department', 'team', 'quarter_batch'],
           order: [['name', 'ASC']]
         });
-      } else if (manager.role === 'company_manager') {
+      } else if (manager.role === 'operational_manager') {
         if (!department) {
           return res.status(400).json({ message: 'A department must be selected to assign downward reviews' });
         }
@@ -501,7 +509,7 @@ router.post('/assign-peer', auth, async (req, res) => {
     // =========================================================================
     if (peerType === 'reports_to_manager') {
       if (manager.role === 'team_manager' || manager.role === 'hr_manager') {
-        return res.status(403).json({ message: 'Only Department Managers and Company Manager can initiate upward reviews' });
+        return res.status(403).json({ message: 'Only Department Managers and Operational Manager can initiate upward reviews' });
       }
 
       let subject = null;
@@ -536,7 +544,7 @@ router.post('/assign-peer', auth, async (req, res) => {
           attributes: ['id', 'name', 'email', 'role', 'department', 'team', 'quarter_batch'],
           order: [['name', 'ASC']]
         });
-      } else if (manager.role === 'company_manager') {
+      } else if (manager.role === 'operational_manager') {
         if (!department) {
           return res.status(400).json({ message: 'A department must be selected to assign upward reviews' });
         }
@@ -727,13 +735,13 @@ router.post('/assign-peer', auth, async (req, res) => {
       if (!allInDept) {
         return res.status(403).json({ message: 'Subject and reviewers must all be Team Managers in your department' });
       }
-    } else if (manager.role === 'company_manager') {
+    } else if (manager.role === 'operational_manager') {
       const allDirectHeads = [subjectUser, rev1User, rev2User].every(u =>
         u.manager_id === manager.id &&
         ['department_manager', 'hr_manager'].includes(u.role)
       );
       if (!allDirectHeads) {
-        return res.status(403).json({ message: 'Subject and reviewers must all be Department Heads reporting directly to the Company Manager' });
+        return res.status(403).json({ message: 'Subject and reviewers must all be Department Heads reporting directly to the Operational Manager' });
       }
     } else if (manager.role === 'hr_manager') {
       const allHrEmps = [subjectUser, rev1User, rev2User].every(u =>

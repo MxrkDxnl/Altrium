@@ -8,7 +8,7 @@ import { useAuth } from '../context/useAuth';
 
 export default function AssignedPlans() {
   const { currentUser } = useAuth();
-  const isCompanyManager = currentUser?.role === 'company_manager';
+  const isCompanyManager = currentUser?.role === 'operational_manager' || currentUser?.role === 'company_manager';
 
   const [activeTab, setActiveTab] = useState('PIP'); // 'PIP' or 'PDP'
   const [plans, setPlans] = useState([]);

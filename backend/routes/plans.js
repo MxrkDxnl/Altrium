@@ -71,8 +71,8 @@ router.get('/eligible-recipients', auth, async (req, res) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    if (!['team_manager', 'department_manager', 'company_manager'].includes(manager.role)) {
-      return res.status(403).json({ message: 'Only Team Managers, Department Managers, and Company Managers can assign plans' });
+    if (!['team_manager', 'department_manager', 'operational_manager'].includes(manager.role)) {
+      return res.status(403).json({ message: 'Only Team Managers, Department Managers, and Operational Managers can assign plans' });
     }
 
     let recipients = [];
@@ -110,7 +110,7 @@ router.get('/eligible-recipients', auth, async (req, res) => {
         attributes: ['id', 'name', 'email', 'role', 'department', 'team', 'quarter_batch'],
         order: [['name', 'ASC']]
       });
-    } else if (manager.role === 'company_manager') {
+    } else if (manager.role === 'operational_manager') {
       recipients = await User.findAll({
         where: {
           manager_id: manager.id,
@@ -170,6 +170,19 @@ router.get('/eligible-recipients', auth, async (req, res) => {
 // POST /api/plans
 router.post('/', auth, async (req, res) => {
   try {
+    const manager = await User.findByPk(req.user.id);
+    if (!manager) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    if (manager.role === 'admin') {
+      return res.status(403).json({ message: 'Administrators are not permitted to assign plans' });
+    }
+
+    if (!['team_manager', 'department_manager', 'operational_manager'].includes(manager.role)) {
+      return res.status(403).json({ message: 'Only Team Managers, Department Managers, and Operational Managers can assign plans' });
+    }
+
     const { quarter: activeQuarter, year: activeYear } = getActiveQuarterAndYear();
     const { type, recipient_id, title, description } = req.body;
 
@@ -196,15 +209,6 @@ router.post('/', auth, async (req, res) => {
     if (type === 'PIP') {
       const deadlineInfo = calculatePipDeadline(new Date());
       cleanDueDate = deadlineInfo.dueDateISO;
-    }
-
-    const manager = await User.findByPk(req.user.id);
-    if (!manager) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-
-    if (!['team_manager', 'department_manager', 'company_manager'].includes(manager.role)) {
-      return res.status(403).json({ message: 'Only Team Managers, Department Managers, and Company Managers can assign plans' });
     }
 
     const recipient = await User.findByPk(recipientIdNum);
@@ -236,7 +240,7 @@ router.post('/', auth, async (req, res) => {
           message: 'Recipient is not an eligible direct Team Manager in your department'
         });
       }
-    } else if (manager.role === 'company_manager') {
+    } else if (manager.role === 'operational_manager') {
       const isDirectDeptHead =
         recipient.manager_id === manager.id &&
         ['department_manager', 'hr_manager'].includes(recipient.role);
@@ -328,8 +332,8 @@ router.get('/assigned', auth, async (req, res) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    if (!['team_manager', 'department_manager', 'company_manager'].includes(manager.role)) {
-      return res.status(403).json({ message: 'Only Team Managers, Department Managers, and Company Managers can view assigned plans' });
+    if (!['team_manager', 'department_manager'].includes(manager.role)) {
+      return res.status(403).json({ message: 'Only Team Managers and Department Managers can view assigned plans' });
     }
 
     const plans = await Plan.findAll({

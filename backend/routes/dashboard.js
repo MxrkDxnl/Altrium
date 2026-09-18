@@ -856,9 +856,9 @@ router.get('/', auth, async (req, res) => {
     }
 
     // -------------------------------------------------------------
-    // 4. COMPANY MANAGER (Anura Senaratne)
+    // 4. OPERATIONAL MANAGER & ADMIN (Executive Overview)
     // -------------------------------------------------------------
-    else if (currentUser.role === 'company_manager') {
+    else if (currentUser.role === 'admin' || currentUser.role === 'operational_manager') {
       const allDepts = ['IT', 'Finance', 'Human Resources'];
       const allUsers = await User.findAll({
         attributes: ['id', 'name', 'email', 'role', 'department', 'team', 'quarter_batch']

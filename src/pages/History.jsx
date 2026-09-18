@@ -12,10 +12,10 @@ export default function History() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Access Control: Who can see 'All Authorized Records'?
-  // - Authorized manager roles (company_manager, department_manager, team_manager, hr_manager)
+  // - Authorized manager roles (admin, department_manager, team_manager, hr_manager)
   // - HR employees with designated report_portfolio (e.g. Ayesha, Ruwan)
   // Ordinary employees without report portfolio (e.g. Dinesh, Nethmi) see Personal History ONLY.
-  const isManager = ['team_manager', 'department_manager', 'company_manager', 'hr_manager'].includes(currentUser?.role);
+  const isManager = ['team_manager', 'department_manager', 'admin', 'operational_manager', 'company_manager', 'hr_manager'].includes(currentUser?.role);
   const isHrPortfolioHolder = ['Human Resources', 'HR'].includes(currentUser?.department) &&
     currentUser?.role === 'employee' &&
     Boolean(currentUser?.report_portfolio);

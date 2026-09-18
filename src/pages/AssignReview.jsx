@@ -7,7 +7,7 @@ import { useAuth } from '../context/useAuth';
 export default function AssignReview() {
   const { currentUser } = useAuth();
   const role = currentUser?.role || 'employee';
-  const isCompanyManager = role === 'company_manager';
+  const isCompanyManager = role === 'operational_manager' || role === 'company_manager';
   const isHRManager = role === 'hr_manager';
   const isDepartmentManager = role === 'department_manager';
   const isTeamManager = role === 'team_manager';

@@ -30,6 +30,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/history', require('./routes/history'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/admin', require('./routes/admin'));
 
 // Basic health check route
 app.get('/api/health', (req, res) => {

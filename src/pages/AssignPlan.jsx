@@ -7,7 +7,7 @@ import { useAuth } from '../context/useAuth';
 
 export default function AssignPlan() {
   const { currentUser } = useAuth();
-  const isCompanyManager = currentUser?.role === 'company_manager';
+  const isCompanyManager = currentUser?.role === 'operational_manager' || currentUser?.role === 'company_manager';
   const isDepartmentManager = currentUser?.role === 'department_manager';
 
   const [planType, setPlanType] = useState('');

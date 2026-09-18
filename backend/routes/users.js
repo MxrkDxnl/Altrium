@@ -71,7 +71,11 @@ router.get('/eligible', auth, async (req, res) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    const allowedRoles = ['team_manager', 'department_manager', 'hr_manager', 'company_manager'];
+    if (manager.role === 'admin') {
+      return res.status(403).json({ message: 'Administrators are not permitted to assign reviews' });
+    }
+
+    const allowedRoles = ['team_manager', 'department_manager', 'hr_manager', 'operational_manager'];
     if (!allowedRoles.includes(manager.role)) {
       return res.status(403).json({ message: 'Only managers can fetch eligible users' });
     }
@@ -87,7 +91,7 @@ router.get('/eligible', auth, async (req, res) => {
     // =========================================================================
     if (review_type === 'self_review') {
       let subordinates = [];
-      if (manager.role === 'company_manager') {
+      if (manager.role === 'operational_manager') {
         subordinates = await User.findAll({
           where: { manager_id: manager.id },
           attributes: ['id', 'name', 'email', 'role', 'department', 'team', 'report_portfolio', 'quarter_batch'],
@@ -208,8 +212,8 @@ router.get('/eligible', auth, async (req, res) => {
         });
       }
 
-      // Company Manager selecting a Department
-      if (manager.role === 'company_manager') {
+      // Operational Manager selecting a Department
+      if (manager.role === 'operational_manager') {
         const availableDepts = [
           { department: 'IT', label: 'IT Department (Dinesh Jayawardena)' },
           { department: 'Finance', label: 'Finance Department (Chamari Perera)' },

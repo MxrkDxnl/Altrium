@@ -11,7 +11,7 @@ router.post('/login', async (req, res) => {
   try {
     const user = await User.findOne({ where: { email } });
     
-    if (!user) {
+    if (!user || user.is_active === false) {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
 
@@ -30,6 +30,7 @@ router.post('/login', async (req, res) => {
       team: user.team,
       report_portfolio: user.report_portfolio,
       quarter_batch: user.quarter_batch,
+      is_active: user.is_active,
       profile_picture: user.profile_picture
     };
 
