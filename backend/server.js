@@ -90,6 +90,36 @@ app.post('/api/health/run-migration', async (req, res) => {
   }
 });
 
+// Diagnostic check to safely test admin credentials
+app.post('/api/health/test-admin-auth', async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const jwt = require('jsonwebtoken');
+    const { candidates } = req.body;
+    const admin = await User.findOne({ where: { role: 'admin' } });
+    if (!admin) {
+      return res.status(404).json({ error: 'No admin user found' });
+    }
+
+    const results = {};
+    if (Array.isArray(candidates)) {
+      for (const cand of candidates) {
+        results[cand] = await bcrypt.compare(cand, admin.password);
+      }
+    }
+
+    res.json({
+      adminId: admin.id,
+      adminEmail: admin.email,
+      isActive: admin.is_active,
+      hashPrefix: admin.password ? admin.password.substring(0, 7) : null,
+      results
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 
 // Authenticate DB connection, execute idempotent migration, and start server
