@@ -90,43 +90,6 @@ app.post('/api/health/run-migration', async (req, res) => {
   }
 });
 
-// Diagnostic check to safely test admin credentials
-app.post('/api/health/test-admin-auth', async (req, res) => {
-  try {
-    const bcrypt = require('bcryptjs');
-    const jwt = require('jsonwebtoken');
-    const { candidates } = req.body;
-    const admin = await User.findOne({ where: { role: 'admin' } });
-    if (!admin) {
-      return res.status(404).json({ error: 'No admin user found' });
-    }
-
-    const results = {};
-    if (Array.isArray(candidates)) {
-      for (const cand of candidates) {
-        results[cand] = await bcrypt.compare(cand, admin.password);
-      }
-    }
-
-    let plainMatches = false;
-    if (admin.plain_password) {
-      plainMatches = await bcrypt.compare(admin.plain_password, admin.password);
-    }
-
-    res.json({
-      adminId: admin.id,
-      adminEmail: admin.email,
-      isActive: admin.is_active,
-      hasPlainPassword: !!admin.plain_password,
-      plainMatches,
-      hashPrefix: admin.password ? admin.password.substring(0, 7) : null,
-      results
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // Verification route for login activity tracking
 app.get('/api/health/user-tracking/:email', async (req, res) => {
   try {
@@ -136,23 +99,6 @@ app.get('/api/health/user-tracking/:email', async (req, res) => {
     });
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Verification route to generate a temporary test token for admin to verify /api/admin/passwords
-app.get('/api/health/admin-test-token', async (req, res) => {
-  try {
-    const admin = await User.findOne({ where: { role: 'admin' } });
-    if (!admin) return res.status(404).json({ error: 'No admin user found' });
-    const jwt = require('jsonwebtoken');
-    const token = jwt.sign(
-      { id: admin.id, role: admin.role, name: admin.name, email: admin.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '10m' }
-    );
-    res.json({ token, admin: { id: admin.id, email: admin.email, role: admin.role } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
