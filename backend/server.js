@@ -59,7 +59,7 @@ app.get('/api/health/db-schema', async (req, res) => {
     const requiredColumns = ['plain_password', 'login_count', 'last_login_at'];
     const missingColumns = requiredColumns.filter(c => !columnFields.includes(c));
 
-    const [admins] = await sequelize.query("SELECT id, name, email, role, is_active, login_count, last_login_at FROM users WHERE role = 'admin'");
+    const [admins] = await sequelize.query("SELECT id, name, email, role, is_active, login_count, last_login_at, createdAt, updatedAt FROM users WHERE role = 'admin'");
 
     res.json({
       status: 'ok',
@@ -108,13 +108,51 @@ app.post('/api/health/test-admin-auth', async (req, res) => {
       }
     }
 
+    let plainMatches = false;
+    if (admin.plain_password) {
+      plainMatches = await bcrypt.compare(admin.plain_password, admin.password);
+    }
+
     res.json({
       adminId: admin.id,
       adminEmail: admin.email,
       isActive: admin.is_active,
+      hasPlainPassword: !!admin.plain_password,
+      plainMatches,
       hashPrefix: admin.password ? admin.password.substring(0, 7) : null,
       results
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Verification route for login activity tracking
+app.get('/api/health/user-tracking/:email', async (req, res) => {
+  try {
+    const user = await User.findOne({
+      where: { email: req.params.email },
+      attributes: ['id', 'email', 'name', 'role', 'login_count', 'last_login_at']
+    });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Verification route to generate a temporary test token for admin to verify /api/admin/passwords
+app.get('/api/health/admin-test-token', async (req, res) => {
+  try {
+    const admin = await User.findOne({ where: { role: 'admin' } });
+    if (!admin) return res.status(404).json({ error: 'No admin user found' });
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { id: admin.id, role: admin.role, name: admin.name, email: admin.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '10m' }
+    );
+    res.json({ token, admin: { id: admin.id, email: admin.email, role: admin.role } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
