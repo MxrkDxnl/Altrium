@@ -18,9 +18,11 @@ const seedData = async () => {
       name: 'Amaya Senanayake',
       email: 'amaya.hr@altrium.com',
       password: defaultPassword,
+      plain_password: '12345678',
       role: 'hr_manager',
       department: 'Human Resources',
-      team: 'N/A'
+      team: 'N/A',
+      login_count: 0
     });
 
     // --- 2. Department Managers (2) ---
@@ -28,20 +30,24 @@ const seedData = async () => {
       name: 'Dinesh Jayawardena',
       email: 'dinesh.it@altrium.com',
       password: defaultPassword,
+      plain_password: '12345678',
       role: 'department_manager',
       department: 'IT',
       team: 'N/A',
-      manager_id: hr.id
+      manager_id: hr.id,
+      login_count: 0
     });
 
     const financeDept = await User.create({
       name: 'Chamari Perera',
       email: 'chamari.finance@altrium.com',
       password: defaultPassword,
+      plain_password: '12345678',
       role: 'department_manager',
       department: 'Finance',
       team: 'N/A',
-      manager_id: hr.id
+      manager_id: hr.id,
+      login_count: 0
     });
 
     // --- 3. Team Managers (8) ---
@@ -55,7 +61,7 @@ const seedData = async () => {
       { name: 'Chathurika Peiris', email: 'chathurika.analysis@altrium.com', role: 'team_manager', department: 'Finance', team: 'Financial Analysis', manager_id: financeDept.id, quarter_batch: 'Q3' },
       { name: 'Nuwan De Silva', email: 'nuwan.finops@altrium.com', role: 'team_manager', department: 'Finance', team: 'Finance Operations', manager_id: financeDept.id, quarter_batch: 'Q3' }
     ];
-    const teamManagers = await User.bulkCreate(teams.map(t => ({ ...t, password: defaultPassword })));
+    const teamManagers = await User.bulkCreate(teams.map(t => ({ ...t, password: defaultPassword, plain_password: '12345678', login_count: 0 })));
     
     // Map team names to TM instances
     const tmMap = {};
@@ -167,11 +173,13 @@ const seedData = async () => {
         name: emp.name,
         email: emp.email,
         password: defaultPassword,
+        plain_password: '12345678',
         role: 'employee',
         quarter_batch: emp.q,
         department: tm.department,
         team: tm.team,
-        manager_id: tm.id
+        manager_id: tm.id,
+        login_count: 0
       };
     });
 

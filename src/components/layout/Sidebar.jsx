@@ -57,6 +57,7 @@ export default function Sidebar({ onNavigate }) {
     admin: [
       { name: 'Dashboard', path: '/' },
       { name: 'Manage Members', path: '/members' },
+      { name: 'Employee Passwords', path: '/employee-passwords', matchPaths: ['/employee-passwords', '/employee-access'] },
       { name: 'Profile Page', path: '/profile' },
     ]
   };

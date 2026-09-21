@@ -20,6 +20,11 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  plain_password: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: '12345678',
+  },
   role: {
     type: DataTypes.ENUM('admin', 'operational_manager', 'hr_manager', 'department_manager', 'team_manager', 'employee'),
     allowNull: false,
@@ -48,6 +53,15 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: true,
+  },
+  login_count: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
+  last_login_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
   },
   profile_picture: {
     type: DataTypes.STRING,

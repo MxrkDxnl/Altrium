@@ -18,6 +18,7 @@ const ReviewForm = lazy(() => import('./pages/ReviewForm'));
 const History = lazy(() => import('./pages/History'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Members = lazy(() => import('./pages/Members'));
+const EmployeePasswords = lazy(() => import('./pages/EmployeePasswords'));
 
 function PageFallback() {
   return (
@@ -64,6 +65,8 @@ export default function App() {
         {currentUser.role === 'admin' && (
           <>
             <Route path="members" element={<Members />} />
+            <Route path="employee-passwords" element={<EmployeePasswords />} />
+            <Route path="employee-access" element={<Navigate to="/employee-passwords" replace />} />
             <Route path="profile" element={<Profile />} />
           </>
         )}

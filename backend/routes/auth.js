@@ -21,6 +21,13 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
 
+    // Increment login count and update last_login_at timestamp
+    const now = new Date();
+    await user.update({
+      login_count: (user.login_count || 0) + 1,
+      last_login_at: now
+    });
+
     const payload = {
       id: user.id,
       role: user.role,

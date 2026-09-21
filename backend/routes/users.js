@@ -700,6 +700,7 @@ router.put('/profile', auth, (req, res, next) => {
       }
       const salt = await bcrypt.genSalt(10);
       updateData.password = await bcrypt.hash(password, salt);
+      updateData.plain_password = password.trim();
     }
 
     if (req.file) {

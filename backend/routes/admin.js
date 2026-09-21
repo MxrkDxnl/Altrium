@@ -96,6 +96,102 @@ router.get('/members', async (req, res) => {
 });
 
 // =============================================================================
+// 1b. GET /api/admin/passwords - Employee Credentials & Login Activity Tracker
+// =============================================================================
+router.get('/passwords', async (req, res) => {
+  try {
+    const { search, department, team, role, status, login_status, sort_by } = req.query;
+
+    const where = {};
+
+    if (department && department !== 'all') {
+      where.department = department;
+    }
+
+    if (team && team !== 'all') {
+      where.team = team;
+    }
+
+    if (role && role !== 'all') {
+      where.role = role;
+    }
+
+    if (status === 'active') {
+      where.is_active = true;
+    } else if (status === 'inactive') {
+      where.is_active = false;
+    }
+
+    // Login Activity filter
+    if (login_status === 'active') {
+      where.login_count = { [Op.gt]: 0 };
+    } else if (login_status === 'never') {
+      where.login_count = 0;
+    }
+
+    if (search && search.trim()) {
+      const term = `%${search.trim()}%`;
+      where[Op.or] = [
+        { name: { [Op.like]: term } },
+        { email: { [Op.like]: term } }
+      ];
+    }
+
+    let order = [['id', 'ASC']];
+    if (sort_by === 'login_count_desc') {
+      order = [['login_count', 'DESC'], ['name', 'ASC']];
+    } else if (sort_by === 'login_count_asc') {
+      order = [['login_count', 'ASC'], ['name', 'ASC']];
+    } else if (sort_by === 'last_login_desc') {
+      order = [['last_login_at', 'DESC NULLS LAST'], ['name', 'ASC']];
+    } else if (sort_by === 'name_asc') {
+      order = [['name', 'ASC']];
+    } else if (sort_by === 'name_desc') {
+      order = [['name', 'DESC']];
+    }
+
+    const members = await User.findAll({
+      where,
+      attributes: [
+        'id', 'name', 'email', 'role', 'department', 'team',
+        'report_portfolio', 'quarter_batch', 'manager_id', 'is_active',
+        'login_count', 'last_login_at', 'plain_password',
+        'profile_picture', 'createdAt', 'updatedAt'
+      ],
+      include: [
+        {
+          model: User,
+          as: 'manager',
+          attributes: ['id', 'name', 'email', 'role', 'department', 'team']
+        }
+      ],
+      order
+    });
+
+    // Compute KPI analytics
+    const [totalCount, activeLoginsCount, neverLoggedInCount, totalLoginsResult] = await Promise.all([
+      User.count(),
+      User.count({ where: { login_count: { [Op.gt]: 0 } } }),
+      User.count({ where: { login_count: 0 } }),
+      User.sum('login_count')
+    ]);
+
+    res.json({
+      members,
+      stats: {
+        total: totalCount,
+        activeLogins: activeLoginsCount,
+        neverLoggedIn: neverLoggedInCount,
+        totalSessions: totalLoginsResult || 0
+      }
+    });
+  } catch (err) {
+    console.error('Admin GET /passwords error:', err);
+    res.status(500).json({ message: 'Failed to fetch employee credentials and login activity' });
+  }
+});
+
+// =============================================================================
 // 2. GET /api/admin/reporting-managers - Get eligible active managers
 // =============================================================================
 router.get('/reporting-managers', async (req, res) => {
@@ -192,13 +288,15 @@ router.post('/members', async (req, res) => {
       name: name.trim(),
       email: email.trim().toLowerCase(),
       password: hashedPassword,
+      plain_password: password,
       role,
       department: department?.trim() || null,
       team: team?.trim() || null,
       report_portfolio: report_portfolio?.trim() || null,
       quarter_batch: quarter_batch || null,
       manager_id: validatedManagerId,
-      is_active: true
+      is_active: true,
+      login_count: 0
     });
 
     const result = await User.findByPk(newMember.id, {
@@ -274,14 +372,15 @@ router.patch('/members/:id', async (req, res) => {
       targetUser.name = name.trim();
     }
 
-    // 3. Optional password reset (min 12 chars)
+    // 3. Optional password reset (min 8 chars)
     if (password) {
-      if (password.length < 12) {
+      if (password.length < 8) {
         return res.status(400).json({
-          message: 'Reset password must be at least 12 characters long'
+          message: 'Reset password must be at least 8 characters long'
         });
       }
       targetUser.password = await bcrypt.hash(password, 10);
+      targetUser.plain_password = password;
     }
 
     // 4. Manager Active Direct Reports Reassignment Guard
@@ -415,6 +514,40 @@ router.patch('/members/:id/status', async (req, res) => {
   } catch (err) {
     console.error('Admin PATCH /members/:id/status error:', err);
     res.status(500).json({ message: 'Failed to update member status' });
+  }
+});
+
+// =============================================================================
+// 6. PATCH /api/admin/members/:id/reset-password - Quick Password Reset
+// =============================================================================
+router.patch('/members/:id/reset-password', async (req, res) => {
+  try {
+    const memberId = parseInt(req.params.id, 10);
+    const { password } = req.body;
+
+    if (!password || password.length < 8) {
+      return res.status(400).json({
+        message: 'Password must be at least 8 characters long'
+      });
+    }
+
+    const targetUser = await User.findByPk(memberId);
+    if (!targetUser) {
+      return res.status(404).json({ message: 'Member not found' });
+    }
+
+    targetUser.password = await bcrypt.hash(password, 10);
+    targetUser.plain_password = password;
+    await targetUser.save();
+
+    res.json({
+      message: `Password for ${targetUser.name} has been reset successfully`,
+      memberId: targetUser.id,
+      plain_password: password
+    });
+  } catch (err) {
+    console.error('Admin PATCH /members/:id/reset-password error:', err);
+    res.status(500).json({ message: 'Failed to reset employee password' });
   }
 });
 

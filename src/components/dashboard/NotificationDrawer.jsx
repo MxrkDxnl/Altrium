@@ -84,9 +84,8 @@ export default function NotificationDrawer({
                   setFilter('all');
                   setPage(1);
                 }}
-                className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                  filter === 'all' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${filter === 'all' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                  }`}
               >
                 All ({notifications.length})
               </button>
@@ -96,9 +95,8 @@ export default function NotificationDrawer({
                   setFilter('unread');
                   setPage(1);
                 }}
-                className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                  filter === 'unread' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${filter === 'unread' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                  }`}
               >
                 Unread ({unreadCount})
               </button>
@@ -139,18 +137,15 @@ export default function NotificationDrawer({
                       onNotificationClick(notif);
                       onClose();
                     }}
-                    className={`py-3.5 px-2 -mx-2 rounded-lg cursor-pointer transition-colors ${
-                      isUnread ? 'bg-amber-50/30 hover:bg-amber-50/60' : 'hover:bg-gray-50/80'
-                    }`}
+                    className={`py-3.5 px-2 -mx-2 rounded-lg cursor-pointer transition-colors ${isUnread ? 'bg-amber-50/30 hover:bg-amber-50/60' : 'hover:bg-gray-50/80'
+                      }`}
                   >
                     <div className="flex items-start gap-2.5">
-                      <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                        isUnread ? 'bg-amber-500 ring-4 ring-amber-100' : 'bg-transparent'
-                      }`} />
+                      <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${isUnread ? 'bg-amber-500 ring-4 ring-amber-100' : 'bg-transparent'
+                        }`} />
                       <div className="min-w-0 flex-1">
-                        <p className={`text-xs sm:text-sm leading-snug break-words ${
-                          isUnread ? 'font-bold text-gray-900' : 'font-normal text-gray-700'
-                        }`}>
+                        <p className={`text-xs sm:text-sm leading-snug break-words ${isUnread ? 'font-bold text-gray-900' : 'font-normal text-gray-700'
+                          }`}>
                           {notif.message}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
