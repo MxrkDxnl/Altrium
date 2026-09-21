@@ -59,12 +59,15 @@ app.get('/api/health/db-schema', async (req, res) => {
     const requiredColumns = ['plain_password', 'login_count', 'last_login_at'];
     const missingColumns = requiredColumns.filter(c => !columnFields.includes(c));
 
+    const [admins] = await sequelize.query("SELECT id, name, email, role, is_active, login_count, last_login_at FROM users WHERE role = 'admin'");
+
     res.json({
       status: 'ok',
       database: sequelize.config.database,
       totalUsers: userCountResult[0]?.totalUsers,
       backupTableExists: backupCheck.length > 0,
       backupTotalUsers,
+      admins,
       columns,
       missingColumns,
       isSchemaReady: missingColumns.length === 0
