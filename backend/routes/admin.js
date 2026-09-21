@@ -143,7 +143,7 @@ router.get('/passwords', async (req, res) => {
     } else if (sort_by === 'login_count_asc') {
       order = [['login_count', 'ASC'], ['name', 'ASC']];
     } else if (sort_by === 'last_login_desc') {
-      order = [[User.sequelize.literal('`last_login_at` IS NULL'), 'ASC'], ['last_login_at', 'DESC'], ['name', 'ASC']];
+      order = [[User.sequelize.literal('`User`.`last_login_at` IS NULL'), 'ASC'], ['last_login_at', 'DESC'], ['name', 'ASC']];
     } else if (sort_by === 'name_asc') {
       order = [['name', 'ASC']];
     } else if (sort_by === 'name_desc') {
@@ -187,7 +187,7 @@ router.get('/passwords', async (req, res) => {
     });
   } catch (err) {
     console.error('Admin GET /passwords error:', err);
-    res.status(500).json({ message: 'Failed to fetch employee credentials and login activity' });
+    res.status(500).json({ message: 'Failed to fetch employee credentials and login activity', error: err.message });
   }
 });
 
