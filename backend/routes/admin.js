@@ -143,7 +143,7 @@ router.get('/passwords', async (req, res) => {
     } else if (sort_by === 'login_count_asc') {
       order = [['login_count', 'ASC'], ['name', 'ASC']];
     } else if (sort_by === 'last_login_desc') {
-      order = [['last_login_at', 'DESC NULLS LAST'], ['name', 'ASC']];
+      order = [[User.sequelize.literal('`last_login_at` IS NULL'), 'ASC'], ['last_login_at', 'DESC'], ['name', 'ASC']];
     } else if (sort_by === 'name_asc') {
       order = [['name', 'ASC']];
     } else if (sort_by === 'name_desc') {

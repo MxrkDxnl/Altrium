@@ -43,12 +43,65 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend is running' });
 });
 
+// Verification route to inspect live database schema and confirm migration
+app.get('/api/health/db-schema', async (req, res) => {
+  try {
+    const [columns] = await sequelize.query('SHOW COLUMNS FROM `users`');
+    const [userCountResult] = await sequelize.query('SELECT COUNT(*) AS totalUsers FROM `users`');
+    const [backupCheck] = await sequelize.query("SHOW TABLES LIKE 'users_backup_pre_migration'");
+    let backupTotalUsers = null;
+    if (backupCheck.length > 0) {
+      const [bCountRes] = await sequelize.query('SELECT COUNT(*) AS totalBackupUsers FROM `users_backup_pre_migration`');
+      backupTotalUsers = bCountRes[0]?.totalBackupUsers;
+    }
+
+    const columnFields = columns.map(c => c.Field);
+    const requiredColumns = ['plain_password', 'login_count', 'last_login_at'];
+    const missingColumns = requiredColumns.filter(c => !columnFields.includes(c));
+
+    res.json({
+      status: 'ok',
+      database: sequelize.config.database,
+      totalUsers: userCountResult[0]?.totalUsers,
+      backupTableExists: backupCheck.length > 0,
+      backupTotalUsers,
+      columns,
+      missingColumns,
+      isSchemaReady: missingColumns.length === 0
+    });
+  } catch (err) {
+    console.error('Schema check error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Explicit migration trigger route (idempotent)
+app.post('/api/health/run-migration', async (req, res) => {
+  try {
+    const runMigration = require('./migrations/add_login_tracking_and_plain_password_to_users');
+    const result = await runMigration({ closeConnection: false });
+    res.json(result);
+  } catch (err) {
+    console.error('Migration execution error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 
-// Authenticate DB connection without schema modification and start server
+// Authenticate DB connection, execute idempotent migration, and start server
 sequelize.authenticate()
-  .then(() => {
-    console.log('Database connected successfully (no schema alterations)');
+  .then(async () => {
+    console.log(`Database connected successfully (${sequelize.config.database})`);
+
+    try {
+      const runMigration = require('./migrations/add_login_tracking_and_plain_password_to_users');
+      const migrationResult = await runMigration({ closeConnection: false });
+      console.log(`[Startup Migration] Success: added ${migrationResult.addedColumns.length} columns, total users: ${migrationResult.userCountAfter}`);
+    } catch (migErr) {
+      console.error('[Startup Migration] Warning/Error executing migration on boot:', migErr.message);
+    }
+
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

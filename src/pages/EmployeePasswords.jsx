@@ -170,7 +170,11 @@ export default function EmployeePasswords() {
 
   // Copy password to clipboard
   const handleCopyPassword = (member) => {
-    const pwd = member.plain_password || '12345678';
+    if (!member.plain_password) {
+      showNotification(`Password for ${member.name} is hashed and not recorded in plaintext. Reset password to view.`);
+      return;
+    }
+    const pwd = member.plain_password;
     navigator.clipboard.writeText(pwd).then(() => {
       setCopiedId(`pwd-${member.id}`);
       showNotification(`Password for ${member.name} copied to clipboard!`);
@@ -180,7 +184,7 @@ export default function EmployeePasswords() {
 
   // Copy full credentials (Email + Password)
   const handleCopyCredentials = (member) => {
-    const pwd = member.plain_password || '12345678';
+    const pwd = member.plain_password || '[Pre-existing password - Reset to view]';
     const text = `Altrium Login Credentials:\nEmail: ${member.email}\nPassword: ${pwd}\nPortal URL: ${window.location.origin}`;
     navigator.clipboard.writeText(text).then(() => {
       setCopiedId(`all-${member.id}`);
@@ -203,7 +207,7 @@ export default function EmployeePasswords() {
   // Open reset password modal
   const handleOpenResetModal = (member) => {
     setResetModalMember(member);
-    setNewPassword(member.plain_password || '12345678');
+    setNewPassword(member.plain_password || '');
     setResetError('');
   };
 
@@ -503,7 +507,7 @@ export default function EmployeePasswords() {
               <tbody className="divide-y divide-gray-100 text-sm">
                 {members.map((member) => {
                   const isRevealed = showAllPasswords || revealedIds.has(member.id);
-                  const displayPassword = member.plain_password || '12345678';
+                  const hasPlainPassword = Boolean(member.plain_password);
                   const loginInfo = formatLastLogin(member.last_login_at);
                   const isCopiedPwd = copiedId === `pwd-${member.id}`;
                   const isCopiedAll = copiedId === `all-${member.id}`;
@@ -543,37 +547,45 @@ export default function EmployeePasswords() {
                       {/* Current Password Field */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         <div className="inline-flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
-                          <span className="font-mono text-xs font-semibold text-gray-800 select-all tracking-wide">
-                            {isRevealed ? displayPassword : '••••••••••••'}
-                          </span>
-                          
-                          {/* Toggle visibility */}
-                          <button
-                            type="button"
-                            onClick={() => toggleReveal(member.id)}
-                            className="text-gray-400 hover:text-gray-700 focus:outline-none p-1"
-                            title={isRevealed ? 'Hide Password' : 'Show Password'}
-                          >
-                            {isRevealed ? (
-                              <EyeOffIcon className="w-4 h-4" />
-                            ) : (
-                              <EyeIcon className="w-4 h-4" />
-                            )}
-                          </button>
+                          {hasPlainPassword ? (
+                            <>
+                              <span className="font-mono text-xs font-semibold text-gray-800 select-all tracking-wide">
+                                {isRevealed ? member.plain_password : '••••••••••••'}
+                              </span>
+                              
+                              {/* Toggle visibility */}
+                              <button
+                                type="button"
+                                onClick={() => toggleReveal(member.id)}
+                                className="text-gray-400 hover:text-gray-700 focus:outline-none p-1"
+                                title={isRevealed ? 'Hide Password' : 'Show Password'}
+                              >
+                                {isRevealed ? (
+                                  <EyeOffIcon className="w-4 h-4" />
+                                ) : (
+                                  <EyeIcon className="w-4 h-4" />
+                                )}
+                              </button>
 
-                          {/* Quick Copy Password */}
-                          <button
-                            type="button"
-                            onClick={() => handleCopyPassword(member)}
-                            className="text-gray-400 hover:text-amber-600 focus:outline-none p-1"
-                            title="Copy Password"
-                          >
-                            {isCopiedPwd ? (
-                              <CheckIcon className="w-4 h-4 text-emerald-600" />
-                            ) : (
-                              <CopyIcon className="w-4 h-4" />
-                            )}
-                          </button>
+                              {/* Quick Copy Password */}
+                              <button
+                                type="button"
+                                onClick={() => handleCopyPassword(member)}
+                                className="text-gray-400 hover:text-amber-600 focus:outline-none p-1"
+                                title="Copy Password"
+                              >
+                                {isCopiedPwd ? (
+                                  <CheckIcon className="w-4 h-4 text-emerald-600" />
+                                ) : (
+                                  <CopyIcon className="w-4 h-4" />
+                                )}
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic font-medium" title="Account was created before plaintext password tracking was introduced. Use Reset Password to set a known password.">
+                              Hashed (Not recorded)
+                            </span>
+                          )}
                         </div>
                       </td>
 
