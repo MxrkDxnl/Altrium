@@ -46,7 +46,7 @@ export default function ReviewRecords() {
       </div>
 
       <InfoAlert title="Confidential manager access" variant="green">
-        Reviews, including author names, are visible only to the Team Manager and Department Manager.
+        Reviews, including author names, are visible only to the Team Manager, Department Manager, and Operational Manager.
       </InfoAlert>
 
       <Card 

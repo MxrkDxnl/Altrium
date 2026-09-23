@@ -61,12 +61,30 @@ export default function App() {
         <Route path="company-archive" element={<Navigate to="/history" replace />} />
         <Route path="my-development" element={<Navigate to="/history" replace />} />
         
-        {/* Operational Manager (Admin) Routes */}
+        {/* Administrator Routes */}
         {currentUser.role === 'admin' && (
           <>
             <Route path="members" element={<Members />} />
             <Route path="employee-passwords" element={<EmployeePasswords />} />
             <Route path="employee-access" element={<Navigate to="/employee-passwords" replace />} />
+            <Route path="profile" element={<Profile />} />
+          </>
+        )}
+
+        {/* Operational Manager Routes */}
+        {(currentUser.role === 'operational_manager' || currentUser.role === 'company_manager') && (
+          <>
+            <Route path="assign-tasks" element={<AssignReview />} />
+            <Route path="assign-reviews" element={<AssignReview />} />
+            <Route path="assign-plan" element={<AssignPlan />} />
+            <Route path="assign-pip-pdp" element={<AssignPlan />} />
+            <Route path="assigned-plans" element={<AssignedPlans />} />
+            <Route path="pip-pdp-table" element={<AssignedPlans />} />
+            <Route path="review-table" element={<ReviewRecords />} />
+            <Route path="department-reports" element={<DepartmentReports />} />
+            <Route path="reports" element={<DepartmentReports />} />
+            <Route path="my-tasks" element={<MyTasks />} />
+            <Route path="review-form/:id" element={<ReviewForm />} />
             <Route path="profile" element={<Profile />} />
           </>
         )}

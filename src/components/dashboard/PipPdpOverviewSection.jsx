@@ -32,7 +32,7 @@ export default function PipPdpOverviewSection({ pipPdpOverview, userRole }) {
               {completedPlansCount} Concluded
             </span>
           )}
-          {['team_manager', 'department_manager'].includes(userRole) && (
+          {['team_manager', 'department_manager', 'operational_manager', 'company_manager'].includes(userRole) && (
             <Link
               to="/assigned-plans"
               className="text-xs font-semibold text-amber-700 hover:text-amber-800 underline ml-1"

@@ -454,6 +454,8 @@ router.get('/', auth, async (req, res) => {
       whereClause = { author_id: user.id };
     } else if (user.role === 'employee' && (user.department === 'Human Resources' || user.department === 'HR') && user.report_portfolio) {
       whereClause = { recipient_id: user.id };
+    } else if (['operational_manager', 'company_manager', 'admin'].includes(user.role)) {
+      whereClause = {};
     } else {
       return res.status(403).json({ message: 'Access denied: You are not authorized to view department summary reports.' });
     }
@@ -500,8 +502,9 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Department report not found' });
     }
 
-    // Access control: strictly author or recipient
-    if (report.author_id !== req.user.id && report.recipient_id !== req.user.id) {
+    // Access control: author, recipient, or operational/admin oversight
+    const isSuperUser = ['operational_manager', 'company_manager', 'admin'].includes(req.user.role);
+    if (report.author_id !== req.user.id && report.recipient_id !== req.user.id && !isSuperUser) {
       return res.status(403).json({ message: 'Access denied: You are not authorized to view this report.' });
     }
 
@@ -528,8 +531,9 @@ router.get('/:id/download', auth, async (req, res) => {
       return res.status(404).json({ message: 'Department report not found' });
     }
 
-    // Access control: strictly author or recipient
-    if (report.author_id !== req.user.id && report.recipient_id !== req.user.id) {
+    // Access control: author, recipient, or operational/admin oversight
+    const isSuperUser = ['operational_manager', 'company_manager', 'admin'].includes(req.user.role);
+    if (report.author_id !== req.user.id && report.recipient_id !== req.user.id && !isSuperUser) {
       return res.status(403).json({ message: 'Access denied: You are not authorized to download this report document.' });
     }
 

@@ -4,7 +4,7 @@ import { useAuth } from '../../context/useAuth';
 export default function Sidebar({ onNavigate }) {
   const { currentUser } = useAuth();
   const location = useLocation();
-  const role = currentUser?.role || 'employee';
+  const role = currentUser?.role === 'company_manager' ? 'operational_manager' : (currentUser?.role || 'employee');
 
   const navLinks = {
     employee: [

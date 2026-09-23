@@ -236,7 +236,7 @@ router.post('/submit', auth, async (req, res) => {
 // Manager fetches completed reviews for direct reports
 router.get('/subordinates', auth, async (req, res) => {
   try {
-    if (!['team_manager', 'department_manager'].includes(req.user.role)) {
+    if (!['team_manager', 'department_manager', 'operational_manager', 'company_manager'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 

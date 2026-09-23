@@ -11,6 +11,7 @@ export default function DepartmentReports() {
   const isHrRecipient = currentUser?.role === 'employee' &&
     (currentUser?.department === 'Human Resources' || currentUser?.department === 'HR') &&
     Boolean(currentUser?.report_portfolio);
+  const isOpsManager = currentUser?.role === 'operational_manager' || currentUser?.role === 'company_manager' || currentUser?.role === 'admin';
 
   const [loading, setLoading] = useState(true);
   const [previewData, setPreviewData] = useState(null);
@@ -61,7 +62,7 @@ export default function DepartmentReports() {
         }
       }
 
-      if (isDeptManager || isHrRecipient) {
+      if (isDeptManager || isHrRecipient || isOpsManager) {
         const listRes = await api.get('/reports');
         setReportsList(listRes.data || []);
       }
@@ -71,7 +72,7 @@ export default function DepartmentReports() {
     } finally {
       setLoading(false);
     }
-  }, [isDeptManager, isHrRecipient]);
+  }, [isDeptManager, isHrRecipient, isOpsManager]);
 
   useEffect(() => {
     let isMounted = true;
@@ -218,7 +219,7 @@ export default function DepartmentReports() {
   };
 
   // Render Access Denied for unauthorized roles
-  if (!isDeptManager && !isHrRecipient) {
+  if (!isDeptManager && !isHrRecipient && !isOpsManager) {
     return (
       <div className="max-w-4xl mx-auto py-8">
         <Card title="Department Reports Access" subtitle="Authorization required">
@@ -244,7 +245,11 @@ export default function DepartmentReports() {
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <p className="text-xs font-bold text-amber-600 tracking-wider uppercase mb-1">
-            {isDeptManager ? `${currentUser?.department} DEPARTMENT MANAGER` : `HR RECIPIENT • ${currentUser?.report_portfolio} PORTFOLIO`}
+            {isDeptManager
+              ? `${currentUser?.department} DEPARTMENT MANAGER`
+              : isOpsManager
+              ? 'OPERATIONAL MANAGER VIEW'
+              : `HR RECIPIENT • ${currentUser?.report_portfolio} PORTFOLIO`}
           </p>
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Department Summary Reports</h1>
         </div>
@@ -269,6 +274,11 @@ export default function DepartmentReports() {
           <span>
             Department Managers manually prepare and submit high-level summary reports to their designated HR portfolio recipient.
             Raw peer and upward review responses, individual ratings, private evidence files, and manager feedback are <strong>never automatically exposed</strong>.
+          </span>
+        ) : isOpsManager ? (
+          <span>
+            You are viewing company-wide Department Summary Reports as an <strong>Operational Manager</strong>.
+            Raw peer reviews, private evidence submissions, and employee notes remain confidential.
           </span>
         ) : (
           <span>
@@ -492,7 +502,13 @@ export default function DepartmentReports() {
 
       {/* REPORTS LIST TABLE */}
       <Card
-        title={isDeptManager ? `${currentUser?.department} Department Submissions` : `${currentUser?.report_portfolio} Portfolio Received Reports`}
+        title={
+          isDeptManager
+            ? `${currentUser?.department} Department Submissions`
+            : isOpsManager
+            ? 'All Department Submissions'
+            : `${currentUser?.report_portfolio} Portfolio Received Reports`
+        }
         subtitle="Department summary reports and revisions"
       >
         {loading ? (
