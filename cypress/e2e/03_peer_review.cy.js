@@ -114,13 +114,14 @@ describe('3. 360 Peer Review Workflow (Sprint 1 & 2)', () => {
         cy.get('#commNotes').clear().type('Always clear and responsive in standups and code reviews.');
         cy.get('#growthAreas').clear().type('Could take on more architecture design leadership.');
 
-        // Stub alert and submit
-        cy.window().then((win) => {
-          cy.stub(win, 'alert').as('alertStub');
-        });
-
         cy.get('button[type="submit"]').contains('Submit Review').click();
-        cy.get('@alertStub').should('have.been.calledWith', 'Review submitted successfully.');
+
+        // Verify Altrium-styled green success message appears
+        cy.contains('Review submitted successfully.', { timeout: 8000 }).should('be.visible');
+
+        // Verify returns to My Tasks with Completed status
+        cy.contains('My Tasks', { timeout: 10000 }).should('be.visible');
+        cy.contains('Completed').should('be.visible');
       }
     });
   });

@@ -2,7 +2,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const express = require('express');
-const sequelize = require('../config/database');
+const _sequelize = require('../config/database');
 const User = require('../models/User');
 
 let app;

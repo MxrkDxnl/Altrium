@@ -82,13 +82,14 @@ describe('2. Self-Review Lifecycle (Sprint 1)', () => {
         cy.get('#commRating').select('Meets Expectations');
         cy.get('#growthAreas').clear().type('Continue enhancing automated test coverage and cross-team collaboration.');
 
-        // Stub alert and submit
-        cy.window().then((win) => {
-          cy.stub(win, 'alert').as('alertStub');
-        });
-
         cy.get('button[type="submit"]').contains('Submit Review').click();
-        cy.get('@alertStub').should('have.been.calledWith', 'Review submitted successfully.');
+
+        // Verify Altrium-styled green success message appears
+        cy.contains('Review submitted successfully.', { timeout: 8000 }).should('be.visible');
+
+        // Verify returns to My Tasks with Completed status
+        cy.contains('My Tasks', { timeout: 10000 }).should('be.visible');
+        cy.contains('Completed').should('be.visible');
       }
     });
   });

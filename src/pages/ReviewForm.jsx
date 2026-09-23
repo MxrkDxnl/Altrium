@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import InfoAlert from '../components/ui/InfoAlert';
@@ -31,7 +31,17 @@ export default function ReviewForm({ task: propTask, onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const [draftSavedMessage, setDraftSavedMessage] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [submissionKey] = useState(() => `rev_sub_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   // Fetch full task data (including subjects and draft_content)
   useEffect(() => {
@@ -146,7 +156,9 @@ export default function ReviewForm({ task: propTask, onClose, onSuccess }) {
   // SAVE DRAFT
   // =========================================================================
   const handleSaveDraft = async () => {
+    if (submitting || savingDraft || Boolean(success)) return;
     setError('');
+    setSuccess('');
     setDraftSavedMessage('');
     setSavingDraft(true);
 
@@ -181,7 +193,9 @@ export default function ReviewForm({ task: propTask, onClose, onSuccess }) {
   // =========================================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting || savingDraft || Boolean(success)) return;
     setError('');
+    setSuccess('');
     setDraftSavedMessage('');
 
     if (isGrouped) {
@@ -204,12 +218,14 @@ export default function ReviewForm({ task: propTask, onClose, onSuccess }) {
           groupContent: groupedForms,
           submissionKey
         });
-        alert('All reviews in the group have been submitted successfully.');
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          navigate('/my-tasks');
-        }
+        setSuccess('Review submitted successfully.');
+        timerRef.current = setTimeout(() => {
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            navigate('/my-tasks');
+          }
+        }, 1500);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to submit grouped reviews');
       } finally {
@@ -236,12 +252,14 @@ export default function ReviewForm({ task: propTask, onClose, onSuccess }) {
         },
         submissionKey
       });
-      alert('Review submitted successfully.');
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        navigate('/my-tasks');
-      }
+      setSuccess('Review submitted successfully.');
+      timerRef.current = setTimeout(() => {
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          navigate('/my-tasks');
+        }
+      }, 1500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit review');
     } finally {
@@ -250,6 +268,9 @@ export default function ReviewForm({ task: propTask, onClose, onSuccess }) {
   };
 
   const handleClose = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
     if (onClose) {
       onClose();
     } else {
@@ -381,6 +402,15 @@ export default function ReviewForm({ task: propTask, onClose, onSuccess }) {
           {error && (
             <div className="bg-red-50 text-red-600 px-4 py-3 rounded-md text-sm border border-red-200">
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 text-green-700 px-4 py-3 rounded-md text-sm border border-green-200 flex items-center space-x-2">
+              <svg className="w-5 h-5 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>{success}</span>
             </div>
           )}
 
@@ -550,39 +580,53 @@ export default function ReviewForm({ task: propTask, onClose, onSuccess }) {
           {/* ============================================================= */}
           {/* ACTIONS: CANCEL, SAVE DRAFT, SUBMIT ALL */}
           {/* ============================================================= */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 border-t border-gray-200">
-            <Button 
-              variant="outline" 
-              type="button" 
-              onClick={handleClose}
-              className="w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
+          <div className="space-y-3 pt-6 border-t border-gray-200">
+            {success && (
+              <div className="bg-green-50 text-green-700 px-4 py-3 rounded-md text-sm border border-green-200 flex items-center space-x-2">
+                <svg className="w-5 h-5 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{success}</span>
+              </div>
+            )}
 
-            <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <Button 
                 variant="outline" 
                 type="button" 
-                onClick={handleSaveDraft}
-                disabled={savingDraft || submitting}
-                className="border-amber-300 text-amber-800 hover:bg-amber-50"
+                onClick={handleClose}
+                disabled={Boolean(success)}
+                className="w-full sm:w-auto"
               >
-                {savingDraft ? 'Saving...' : 'Save Draft'}
+                Cancel
               </Button>
 
-              <Button 
-                variant="primary" 
-                type="submit" 
-                disabled={submitting || savingDraft}
-                className="px-6"
-              >
-                {submitting 
-                  ? 'Submitting...' 
-                  : isGrouped 
-                  ? `Submit All Reviews (${completedCount}/${totalSubjects})` 
-                  : 'Submit Review'}
-              </Button>
+              <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
+                <Button 
+                  variant="outline" 
+                  type="button" 
+                  onClick={handleSaveDraft}
+                  disabled={savingDraft || submitting || Boolean(success)}
+                  className="border-amber-300 text-amber-800 hover:bg-amber-50"
+                >
+                  {savingDraft ? 'Saving...' : 'Save Draft'}
+                </Button>
+
+                <Button 
+                  variant="primary" 
+                  type="submit" 
+                  disabled={submitting || savingDraft || Boolean(success)}
+                  className="px-6"
+                >
+                  {submitting 
+                    ? 'Submitting...' 
+                    : success
+                    ? 'Submitted'
+                    : isGrouped 
+                    ? `Submit All Reviews (${completedCount}/${totalSubjects})` 
+                    : 'Submit Review'}
+                </Button>
+              </div>
             </div>
           </div>
         </form>

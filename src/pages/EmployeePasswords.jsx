@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../api';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
