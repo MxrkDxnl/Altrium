@@ -71,7 +71,7 @@ export default function AssignReview() {
   const getPeerTypeOptions = () => {
     if (isTeamManager) {
       return [
-        { value: 'same_level', label: 'Within Team Managers' }
+        { value: 'same_level', label: 'Within Team Members' }
       ];
     }
     if (isHRManager) {

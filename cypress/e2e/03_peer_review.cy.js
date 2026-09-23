@@ -21,11 +21,11 @@ describe('3. 360 Peer Review Workflow (Sprint 1 & 2)', () => {
     cy.get('select').first().select('peer_review');
     cy.wait('@getEligible');
 
-    // Verify "Select Peer Type" is disabled, auto-selected to same_level, and shows "Within Team Managers"
+    // Verify "Select Peer Type" is disabled, auto-selected to same_level, and shows "Within Team Members"
     cy.get('select').eq(1).should('be.disabled');
     cy.get('select').eq(1).should('have.value', 'same_level');
     cy.get('select').eq(1).find('option').should('have.length', 1);
-    cy.get('select').eq(1).find('option').should('contain', 'Within Team Managers');
+    cy.get('select').eq(1).find('option').should('contain', 'Within Team Members');
 
     // 4. Select an eligible subject to be reviewed
     cy.get('select').eq(2).then(($subjectSelect) => {
