@@ -71,7 +71,7 @@ export default function AssignReview() {
   const getPeerTypeOptions = () => {
     if (isTeamManager) {
       return [
-        { value: 'same_level', label: 'Within Employees' }
+        { value: 'same_level', label: 'Within Team Managers' }
       ];
     }
     if (isHRManager) {
@@ -95,6 +95,10 @@ export default function AssignReview() {
     }
     return [{ value: 'same_level', label: 'Peer Review' }];
   };
+
+  const peerTypeOptions = getPeerTypeOptions();
+  const isSinglePeerType = peerTypeOptions.length === 1;
+  const effectivePeerType = isSinglePeerType ? peerTypeOptions[0].value : peerType;
 
   // 1. Fetch Self Review Recipients
   const fetchSelfRecipients = useCallback(async () => {
@@ -139,7 +143,7 @@ export default function AssignReview() {
           console.error('Failed to fetch self review recipients', err);
         }
       } else if (reviewType === 'peer_review') {
-        if (peerType === 'same_level') {
+        if (effectivePeerType === 'same_level') {
           try {
             const res = await api.get(`/users/eligible?quarter_batch=${quarter}&review_type=peer_review&peer_type=same_level&year=${currentYear}`);
             if (active) setSameLevelSubjects(res.data || []);
@@ -148,7 +152,7 @@ export default function AssignReview() {
           }
         } else if (isDepartmentManager) {
           try {
-            const res = await api.get(`/users/eligible?quarter_batch=${quarter}&review_type=peer_review&peer_type=${peerType}&year=${currentYear}`);
+            const res = await api.get(`/users/eligible?quarter_batch=${quarter}&review_type=peer_review&peer_type=${effectivePeerType}&year=${currentYear}`);
             if (active) setAvailableTeams(res.data?.teams || []);
           } catch (err) {
             console.error('Failed to fetch teams', err);
@@ -158,11 +162,11 @@ export default function AssignReview() {
     };
     loadInitialData();
     return () => { active = false; };
-  }, [reviewType, peerType, isDepartmentManager, quarter, currentYear]);
+  }, [reviewType, effectivePeerType, isDepartmentManager, quarter, currentYear]);
 
   // When Subject is selected in Same-Level
   useEffect(() => {
-    if (!selectedSubjectId || reviewType !== 'peer_review' || peerType !== 'same_level') {
+    if (!selectedSubjectId || reviewType !== 'peer_review' || effectivePeerType !== 'same_level') {
       return;
     }
 
@@ -183,11 +187,11 @@ export default function AssignReview() {
         console.error('Failed to load subject allocation details', err);
       });
     return () => { active = false; };
-  }, [selectedSubjectId, reviewType, peerType, isCompanyManager, isHRManager, quarter, currentYear]);
+  }, [selectedSubjectId, reviewType, effectivePeerType, isCompanyManager, isHRManager, quarter, currentYear]);
 
   // When Team or Department is selected in Peer Type 2 or 3
   useEffect(() => {
-    if (reviewType !== 'peer_review' || peerType === 'same_level') {
+    if (reviewType !== 'peer_review' || effectivePeerType === 'same_level') {
       return;
     }
 
@@ -203,7 +207,7 @@ export default function AssignReview() {
     const queryParams = new URLSearchParams({
       quarter_batch: quarter,
       review_type: 'peer_review',
-      peer_type: peerType,
+      peer_type: effectivePeerType,
       year: currentYear.toString()
     });
 
@@ -224,7 +228,7 @@ export default function AssignReview() {
         console.error('Failed to load group allocation details', err);
       });
     return () => { active = false; };
-  }, [reviewType, peerType, selectedTeam, selectedDepartment, isDepartmentManager, isCompanyManager, quarter, currentYear]);
+  }, [reviewType, effectivePeerType, selectedTeam, selectedDepartment, isDepartmentManager, isCompanyManager, quarter, currentYear]);
 
   // =========================================================================
   // SUBMISSION HANDLERS
@@ -258,7 +262,7 @@ export default function AssignReview() {
 
   const handlePeerReviewSubmit = async () => {
     // 1. Peer Type 1: Same Level
-    if (peerType === 'same_level') {
+    if (effectivePeerType === 'same_level') {
       if (!selectedSubjectId) {
         setError(`Please select the ${getRecipientLabel().toLowerCase()} being reviewed`);
         return;
@@ -348,7 +352,7 @@ export default function AssignReview() {
     }
 
     // 2. Peer Type 2: Manager Reviews Direct Reports (Grouped Downward)
-    if (peerType === 'manager_to_reports') {
+    if (effectivePeerType === 'manager_to_reports') {
       if (isDepartmentManager && !selectedTeam) {
         setError('Please select a team to assign downward reviews');
         return;
@@ -390,7 +394,7 @@ export default function AssignReview() {
     }
 
     // 3. Peer Type 3: Direct Reports Review Manager (Upward)
-    if (peerType === 'reports_to_manager') {
+    if (effectivePeerType === 'reports_to_manager') {
       if (isDepartmentManager && !selectedTeam) {
         setError('Please select a team to assign upward reviews');
         return;
@@ -563,14 +567,15 @@ export default function AssignReview() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Select Peer Type</label>
                   <select 
-                    className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-amber-500 focus:border-amber-500 bg-white font-medium text-gray-800"
-                    value={peerType}
+                    className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-amber-500 focus:border-amber-500 bg-white font-medium text-gray-800 disabled:bg-gray-100 disabled:text-gray-700 disabled:cursor-not-allowed"
+                    value={effectivePeerType}
+                    disabled={isSinglePeerType}
                     onChange={(e) => {
                       setPeerType(e.target.value);
                       handleReset();
                     }}
                   >
-                    {getPeerTypeOptions().map(opt => (
+                    {peerTypeOptions.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
@@ -579,7 +584,7 @@ export default function AssignReview() {
                 {/* ----------------------------------------------------------- */}
                 {/* PEER TYPE 1: SAME LEVEL */}
                 {/* ----------------------------------------------------------- */}
-                {peerType === 'same_level' && (
+                {effectivePeerType === 'same_level' && (
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -688,7 +693,7 @@ export default function AssignReview() {
                 {/* ----------------------------------------------------------- */}
                 {/* PEER TYPE 2: MANAGER REVIEWS DIRECT REPORTS (Grouped Downward) */}
                 {/* ----------------------------------------------------------- */}
-                {peerType === 'manager_to_reports' && (
+                {effectivePeerType === 'manager_to_reports' && (
                   <div className="space-y-4">
                     {isDepartmentManager && (
                       <div>
@@ -735,7 +740,7 @@ export default function AssignReview() {
                 {/* ----------------------------------------------------------- */}
                 {/* PEER TYPE 3: DIRECT REPORTS REVIEW MANAGER (Upward) */}
                 {/* ----------------------------------------------------------- */}
-                {peerType === 'reports_to_manager' && (
+                {effectivePeerType === 'reports_to_manager' && (
                   <div className="space-y-4">
                     {isDepartmentManager && (
                       <div>
@@ -835,7 +840,7 @@ export default function AssignReview() {
                     <span className="font-semibold text-amber-700">{selectedSelfId ? '1 task' : '0 tasks'}</span>
                   </div>
                 </div>
-              ) : peerType === 'same_level' ? (
+              ) : effectivePeerType === 'same_level' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-gray-500 block text-xs">Review Direction</span>
@@ -881,7 +886,7 @@ export default function AssignReview() {
                     </span>
                   </div>
                 </div>
-              ) : peerType === 'manager_to_reports' ? (
+              ) : effectivePeerType === 'manager_to_reports' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-gray-500 block text-xs">Review Direction</span>

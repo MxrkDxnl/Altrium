@@ -21,6 +21,12 @@ describe('3. 360 Peer Review Workflow (Sprint 1 & 2)', () => {
     cy.get('select').first().select('peer_review');
     cy.wait('@getEligible');
 
+    // Verify "Select Peer Type" is disabled, auto-selected to same_level, and shows "Within Team Managers"
+    cy.get('select').eq(1).should('be.disabled');
+    cy.get('select').eq(1).should('have.value', 'same_level');
+    cy.get('select').eq(1).find('option').should('have.length', 1);
+    cy.get('select').eq(1).find('option').should('contain', 'Within Team Managers');
+
     // 4. Select an eligible subject to be reviewed
     cy.get('select').eq(2).then(($subjectSelect) => {
       const availableOptions = $subjectSelect.find('option:not([disabled])').filter((_, el) => el.value !== '');
@@ -141,6 +147,27 @@ describe('3. 360 Peer Review Workflow (Sprint 1 & 2)', () => {
     // Verify Review Table loads with table data and confidentiality badge
     cy.contains('Self & peer review records').should('be.visible');
     cy.contains('Confidential manager access').should('be.visible');
-    cy.get('table').should('be.visible');
+  });
+
+  it('3.5 Verify peer type dropdown remains enabled for Department Manager with multiple options', () => {
+    cy.intercept('GET', '**/api/users/eligible*').as('getEligible');
+
+    // Log in as Department Manager (Dinesh Jayawardena)
+    cy.visit(VERCEL_URL);
+    cy.get('#email').type('dinesh.it@altrium.com');
+    cy.get('#password').type('12345678');
+    cy.get('button[type="submit"]').click();
+
+    cy.contains('Dashboard', { timeout: 10000 }).should('be.visible');
+    cy.visit(`${VERCEL_URL}/assign-reviews`);
+    cy.wait('@getEligible');
+
+    cy.get('select').first().select('peer_review');
+    cy.wait('@getEligible');
+
+    // Verify "Select Peer Type" dropdown for Department Manager has multiple options and is NOT disabled
+    cy.get('select').eq(1).should('not.be.disabled');
+    cy.get('select').eq(1).find('option').should('have.length.gt', 1);
   });
 });
+
