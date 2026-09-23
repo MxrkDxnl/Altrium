@@ -214,6 +214,129 @@ router.get('/reporting-managers', async (req, res) => {
   }
 });
 
+// Helper to determine eligible managers for a role, department, and team on the backend
+const getEligibleReportingManagersBackend = async (role, department, team) => {
+  // 1. Top-level roles require no reporting manager
+  if (!role || role === 'admin' || role === 'operational_manager') {
+    return { isTopLevel: true, eligibleManagers: [], configError: null };
+  }
+
+  // Fetch active managers
+  const activeManagers = await User.findAll({
+    where: {
+      is_active: true,
+      role: {
+        [Op.in]: ['operational_manager', 'department_manager', 'hr_manager', 'team_manager', 'admin', 'company_manager']
+      }
+    },
+    attributes: ['id', 'name', 'email', 'role', 'department', 'team']
+  });
+
+  // 2. HR Manager (HR Head): reports to Operational Manager if exists, else top-level
+  if (role === 'hr_manager') {
+    const ops = activeManagers.filter(
+      (m) => m.role === 'operational_manager' || m.role === 'company_manager'
+    );
+    if (ops.length > 0) {
+      return { isTopLevel: false, eligibleManagers: ops, configError: null };
+    }
+    return { isTopLevel: true, eligibleManagers: [], configError: null };
+  }
+
+  // 3. Department Manager: reports to Operational Manager / Company Executive (or HR Head)
+  if (role === 'department_manager') {
+    const ops = activeManagers.filter(
+      (m) => m.role === 'operational_manager' || m.role === 'company_manager'
+    );
+    if (ops.length > 0) {
+      return { isTopLevel: false, eligibleManagers: ops, configError: null };
+    }
+    const hrHeads = activeManagers.filter((m) => m.role === 'hr_manager');
+    if (hrHeads.length > 0) {
+      return { isTopLevel: false, eligibleManagers: hrHeads, configError: null };
+    }
+    return {
+      isTopLevel: false,
+      eligibleManagers: [],
+      configError: 'No eligible Operational Manager / Company Executive found to supervise this Department Head. An Operational Manager must be configured first.'
+    };
+  }
+
+  // 4. Team Manager: reports to Department Manager of that department
+  if (role === 'team_manager') {
+    if (!department) {
+      return { isTopLevel: false, eligibleManagers: [], configError: 'Department is required to determine the Department Head.' };
+    }
+
+    const deptManagers = activeManagers.filter((m) => {
+      if (department === 'Human Resources' || department === 'HR') {
+        return m.role === 'hr_manager' || (m.role === 'department_manager' && ['Human Resources', 'HR'].includes(m.department));
+      }
+      return m.role === 'department_manager' && m.department === department;
+    });
+
+    if (deptManagers.length > 0) {
+      return { isTopLevel: false, eligibleManagers: deptManagers, configError: null };
+    }
+
+    return {
+      isTopLevel: false,
+      eligibleManagers: [],
+      configError: `No eligible Department Head found for ${department}. A Department Manager must be appointed for ${department} first.`
+    };
+  }
+
+  // 5. Employee / Team Member: reports to that team's Team Manager
+  if (role === 'employee') {
+    if (!department || !team) {
+      return { isTopLevel: false, eligibleManagers: [], configError: 'Department and team are required to determine the Team Manager.' };
+    }
+
+    // Direct Team Manager matching team and department
+    const teamManagers = activeManagers.filter((m) => {
+      if (m.role !== 'team_manager') return false;
+      const matchesTeam = m.team?.trim().toLowerCase() === team?.trim().toLowerCase();
+      const matchesDept = !m.department || m.department?.trim().toLowerCase() === department?.trim().toLowerCase() ||
+        (['human resources', 'hr'].includes(m.department?.trim().toLowerCase()) && ['human resources', 'hr'].includes(department?.trim().toLowerCase()));
+      return matchesTeam && matchesDept;
+    });
+
+    if (teamManagers.length > 0) {
+      return { isTopLevel: false, eligibleManagers: teamManagers, configError: null };
+    }
+
+    // Fallback for Human Resources (HR team members report to HR Head)
+    if (['Human Resources', 'HR'].includes(department)) {
+      const hrHeads = activeManagers.filter((m) => m.role === 'hr_manager');
+      if (hrHeads.length > 0) {
+        return { isTopLevel: false, eligibleManagers: hrHeads, configError: null };
+      }
+    }
+
+    // Fallback for Management (Executive team members report to Operational Manager)
+    if (department === 'Management') {
+      const ops = activeManagers.filter((m) => m.role === 'operational_manager' || m.role === 'admin');
+      if (ops.length > 0) {
+        return { isTopLevel: false, eligibleManagers: ops, configError: null };
+      }
+    }
+
+    // Fallback for Department without TM
+    const deptManagers = activeManagers.filter((m) => m.role === 'department_manager' && m.department === department);
+    if (deptManagers.length > 0) {
+      return { isTopLevel: false, eligibleManagers: deptManagers, configError: null };
+    }
+
+    return {
+      isTopLevel: false,
+      eligibleManagers: [],
+      configError: `No eligible Team Manager found for ${department} → ${team}. A Team Manager must be configured for this team first.`
+    };
+  }
+
+  return { isTopLevel: false, eligibleManagers: [], configError: 'Unknown role hierarchy' };
+};
+
 // =============================================================================
 // 3. POST /api/admin/members - Create a new member
 // =============================================================================
@@ -268,16 +391,50 @@ router.post('/members', async (req, res) => {
       return res.status(400).json({ message: 'A user with this email address already exists' });
     }
 
-    // 5. Validate reporting manager if specified
+    // 5. Hierarchy and reporting manager validation
+    const hierarchyInfo = await getEligibleReportingManagersBackend(role, department, team);
+
     let validatedManagerId = null;
-    if (manager_id) {
-      const managerUser = await User.findByPk(manager_id);
-      if (!managerUser || !managerUser.is_active) {
+
+    if (hierarchyInfo.isTopLevel) {
+      // Top-level roles should not have a reporting manager
+      validatedManagerId = null;
+    } else {
+      // Role requires a reporting manager
+      if (hierarchyInfo.configError && hierarchyInfo.eligibleManagers.length === 0) {
         return res.status(400).json({
-          message: 'Selected reporting manager is not found or is currently inactive'
+          message: hierarchyInfo.configError
         });
       }
-      validatedManagerId = managerUser.id;
+
+      if (hierarchyInfo.eligibleManagers.length === 0) {
+        return res.status(400).json({
+          message: `No eligible reporting manager exists for role '${role}' in ${department || ''}${team ? ` -> ${team}` : ''}. Please configure a manager first.`
+        });
+      }
+
+      const eligibleIds = hierarchyInfo.eligibleManagers.map((m) => m.id);
+
+      if (manager_id) {
+        const parsedManagerId = parseInt(manager_id, 10);
+        if (!eligibleIds.includes(parsedManagerId)) {
+          const eligibleNames = hierarchyInfo.eligibleManagers.map((m) => `${m.name} (${m.role})`).join(', ');
+          return res.status(400).json({
+            message: `Invalid reporting manager for this role/department/team. Eligible manager(s): ${eligibleNames}`
+          });
+        }
+        validatedManagerId = parsedManagerId;
+      } else {
+        // If manager_id was not explicitly passed in payload:
+        if (hierarchyInfo.eligibleManagers.length === 1) {
+          // Auto-assign the single eligible manager
+          validatedManagerId = hierarchyInfo.eligibleManagers[0].id;
+        } else {
+          return res.status(400).json({
+            message: 'A reporting manager must be selected from the eligible managers.'
+          });
+        }
+      }
     }
 
     // 6. Hash password

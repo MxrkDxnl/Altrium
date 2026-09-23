@@ -51,6 +51,118 @@ const ROLES = [
   { value: 'admin', label: 'Administrator' }
 ];
 
+// Resolves eligible managers for a given role, department, team according to Altrium hierarchy
+const getEligibleReportingManagers = (role, department, team, managersList) => {
+  // 1. Top-level roles require no reporting manager
+  if (!role || role === 'admin' || role === 'operational_manager') {
+    return { isTopLevel: true, managers: [], configError: null };
+  }
+
+  // 2. HR Manager (HR Head): reports to Operational Manager if exists, else top-level
+  if (role === 'hr_manager') {
+    const ops = (managersList || []).filter(
+      (m) => m.role === 'operational_manager' || m.role === 'company_manager'
+    );
+    if (ops.length > 0) {
+      return { isTopLevel: false, managers: ops, configError: null };
+    }
+    return { isTopLevel: true, managers: [], configError: null };
+  }
+
+  // 3. Department Manager: reports to Operational Manager / Company Executive (or HR Head)
+  if (role === 'department_manager') {
+    const ops = (managersList || []).filter(
+      (m) => m.role === 'operational_manager' || m.role === 'company_manager'
+    );
+    if (ops.length > 0) {
+      return { isTopLevel: false, managers: ops, configError: null };
+    }
+    const hrHeads = (managersList || []).filter((m) => m.role === 'hr_manager');
+    if (hrHeads.length > 0) {
+      return { isTopLevel: false, managers: hrHeads, configError: null };
+    }
+    return {
+      isTopLevel: false,
+      managers: [],
+      configError: 'No eligible Operational Manager / Company Executive found to supervise this Department Head. An Operational Manager must be configured first.'
+    };
+  }
+
+  // 4. Team Manager: reports to Department Manager of that department
+  if (role === 'team_manager') {
+    if (!department) {
+      return { isTopLevel: false, managers: [], configError: 'Please select a department to determine the Department Head.' };
+    }
+
+    const deptManagers = (managersList || []).filter((m) => {
+      if (department === 'Human Resources' || department === 'HR') {
+        return m.role === 'hr_manager' || (m.role === 'department_manager' && ['Human Resources', 'HR'].includes(m.department));
+      }
+      return m.role === 'department_manager' && m.department === department;
+    });
+
+    if (deptManagers.length > 0) {
+      return { isTopLevel: false, managers: deptManagers, configError: null };
+    }
+
+    return {
+      isTopLevel: false,
+      managers: [],
+      configError: `No eligible Department Head found for ${department}. A Department Manager must be appointed for ${department} first.`
+    };
+  }
+
+  // 5. Employee / Team Member: reports to that team's Team Manager
+  if (role === 'employee') {
+    if (!department || !team) {
+      return { isTopLevel: false, managers: [], configError: 'Please select both department and team to determine the Team Manager.' };
+    }
+
+    // Direct Team Manager matching team and department
+    const teamManagers = (managersList || []).filter((m) => {
+      if (m.role !== 'team_manager') return false;
+      const matchesTeam = m.team?.trim().toLowerCase() === team?.trim().toLowerCase();
+      const matchesDept = !m.department || m.department?.trim().toLowerCase() === department?.trim().toLowerCase() ||
+        (['human resources', 'hr'].includes(m.department?.trim().toLowerCase()) && ['human resources', 'hr'].includes(department?.trim().toLowerCase()));
+      return matchesTeam && matchesDept;
+    });
+
+    if (teamManagers.length > 0) {
+      return { isTopLevel: false, managers: teamManagers, configError: null };
+    }
+
+    // Fallback for Human Resources (HR team members report to HR Head)
+    if (['Human Resources', 'HR'].includes(department)) {
+      const hrHeads = (managersList || []).filter((m) => m.role === 'hr_manager');
+      if (hrHeads.length > 0) {
+        return { isTopLevel: false, managers: hrHeads, configError: null };
+      }
+    }
+
+    // Fallback for Management (Executive team members report to Operational Manager)
+    if (department === 'Management') {
+      const ops = (managersList || []).filter((m) => m.role === 'operational_manager' || m.role === 'admin');
+      if (ops.length > 0) {
+        return { isTopLevel: false, managers: ops, configError: null };
+      }
+    }
+
+    // Fallback for Department without TM
+    const deptManagers = (managersList || []).filter((m) => m.role === 'department_manager' && m.department === department);
+    if (deptManagers.length > 0) {
+      return { isTopLevel: false, managers: deptManagers, configError: null };
+    }
+
+    return {
+      isTopLevel: false,
+      managers: [],
+      configError: `No eligible Team Manager found for ${department} → ${team}. A Team Manager must be configured for this team first.`
+    };
+  }
+
+  return { isTopLevel: false, managers: [], configError: null };
+};
+
 export default function Members() {
   const [members, setMembers] = useState([]);
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
@@ -86,6 +198,21 @@ export default function Members() {
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+
+  // Automatic reporting manager resolution for Add Member modal
+  const addManagerInfo = useMemo(() => {
+    return getEligibleReportingManagers(formData.role, formData.department, formData.team, managers);
+  }, [formData.role, formData.department, formData.team, managers]);
+
+  const effectiveAddManagerId = useMemo(() => {
+    if (addManagerInfo.isTopLevel) return '';
+    if (addManagerInfo.managers.length === 1) return String(addManagerInfo.managers[0].id);
+    if (addManagerInfo.managers.length > 1) {
+      const exists = addManagerInfo.managers.some((m) => String(m.id) === String(formData.manager_id));
+      return exists ? String(formData.manager_id) : '';
+    }
+    return '';
+  }, [addManagerInfo, formData.manager_id]);
 
   // Status toggle confirmation
   const [statusConfirmUser, setStatusConfirmUser] = useState(null);
@@ -151,16 +278,22 @@ export default function Members() {
 
   // Open Add Modal
   const handleOpenAdd = () => {
+    const defaultRole = 'employee';
+    const defaultDept = 'IT';
+    const defaultTeam = 'Software Development';
+    const defaultInfo = getEligibleReportingManagers(defaultRole, defaultDept, defaultTeam, managers);
+    const initialManagerId = defaultInfo.managers.length === 1 ? String(defaultInfo.managers[0].id) : '';
+
     setFormData({
       name: '',
       email: '',
       password: '',
-      role: 'employee',
-      department: 'IT',
-      team: 'Software Development',
+      role: defaultRole,
+      department: defaultDept,
+      team: defaultTeam,
       report_portfolio: '',
       quarter_batch: 'Q1',
-      manager_id: ''
+      manager_id: initialManagerId
     });
     setFormErrors({});
     setIsAddModalOpen(true);
@@ -196,6 +329,14 @@ export default function Members() {
       errors.password = 'Temporary password must be at least 12 characters';
     }
 
+    if (!addManagerInfo.isTopLevel) {
+      if (addManagerInfo.configError || addManagerInfo.managers.length === 0) {
+        errors.manager_id = addManagerInfo.configError || 'An eligible reporting manager must be configured first.';
+      } else if (addManagerInfo.managers.length > 1 && !effectiveAddManagerId) {
+        errors.manager_id = 'Please select a reporting manager';
+      }
+    }
+
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -212,7 +353,9 @@ export default function Members() {
         team: formData.team || null,
         report_portfolio: formData.report_portfolio || null,
         quarter_batch: formData.quarter_batch || null,
-        manager_id: formData.manager_id ? parseInt(formData.manager_id, 10) : null
+        manager_id: addManagerInfo.isTopLevel
+          ? null
+          : effectiveAddManagerId ? parseInt(effectiveAddManagerId, 10) : null
       };
 
       await api.post('/admin/members', payload);
@@ -692,13 +835,28 @@ export default function Members() {
                     } else if (newRole === 'admin') {
                       defaultDept = 'Management';
                       defaultTeam = 'Administration';
+                    } else if (!TEAMS_BY_DEPT[defaultDept] || TEAMS_BY_DEPT[defaultDept].length === 0) {
+                      defaultDept = 'IT';
+                      defaultTeam = 'Software Development';
                     }
+
+                    const info = getEligibleReportingManagers(newRole, defaultDept, defaultTeam, managers);
+                    const resolvedId = info.isTopLevel
+                      ? ''
+                      : info.managers.length === 1
+                      ? String(info.managers[0].id)
+                      : info.managers.some((m) => String(m.id) === String(formData.manager_id))
+                      ? String(formData.manager_id)
+                      : '';
+
                     setFormData({
                       ...formData,
                       role: newRole,
                       department: defaultDept,
-                      team: defaultTeam
+                      team: defaultTeam,
+                      manager_id: resolvedId
                     });
+                    setFormErrors((prev) => ({ ...prev, manager_id: null }));
                   }}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 bg-white"
                 >
@@ -717,11 +875,23 @@ export default function Members() {
                     onChange={(e) => {
                       const newDept = e.target.value;
                       const teams = TEAMS_BY_DEPT[newDept] || [];
+                      const newTeam = teams[0] || '';
+                      const info = getEligibleReportingManagers(formData.role, newDept, newTeam, managers);
+                      const resolvedId = info.isTopLevel
+                        ? ''
+                        : info.managers.length === 1
+                        ? String(info.managers[0].id)
+                        : info.managers.some((m) => String(m.id) === String(formData.manager_id))
+                        ? String(formData.manager_id)
+                        : '';
+
                       setFormData({
                         ...formData,
                         department: newDept,
-                        team: teams[0] || ''
+                        team: newTeam,
+                        manager_id: resolvedId
                       });
+                      setFormErrors((prev) => ({ ...prev, manager_id: null }));
                     }}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 bg-white"
                   >
@@ -735,7 +905,24 @@ export default function Members() {
                   <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Team</label>
                   <select
                     value={formData.team}
-                    onChange={(e) => setFormData({ ...formData, team: e.target.value })}
+                    onChange={(e) => {
+                      const newTeam = e.target.value;
+                      const info = getEligibleReportingManagers(formData.role, formData.department, newTeam, managers);
+                      const resolvedId = info.isTopLevel
+                        ? ''
+                        : info.managers.length === 1
+                        ? String(info.managers[0].id)
+                        : info.managers.some((m) => String(m.id) === String(formData.manager_id))
+                        ? String(formData.manager_id)
+                        : '';
+
+                      setFormData({
+                        ...formData,
+                        team: newTeam,
+                        manager_id: resolvedId
+                      });
+                      setFormErrors((prev) => ({ ...prev, manager_id: null }));
+                    }}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 bg-white"
                   >
                     {availableTeams.map((t) => (
@@ -748,19 +935,65 @@ export default function Members() {
               {/* Reporting Manager & Quarter Batch */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Reporting Manager</label>
-                  <select
-                    value={formData.manager_id}
-                    onChange={(e) => setFormData({ ...formData, manager_id: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 bg-white"
-                  >
-                    <option value="">None (Top Level / Direct)</option>
-                    {managers.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} ({m.role.replace(/_/g, ' ')} - {m.department})
-                      </option>
-                    ))}
-                  </select>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                    Reporting Manager {!addManagerInfo.isTopLevel && <span className="text-red-500">*</span>}
+                  </label>
+                  {addManagerInfo.isTopLevel ? (
+                    <select
+                      value=""
+                      disabled
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed font-medium"
+                    >
+                      <option value="">None (Top Level / Direct)</option>
+                    </select>
+                  ) : addManagerInfo.managers.length === 1 ? (
+                    <>
+                      <select
+                        value={String(addManagerInfo.managers[0].id)}
+                        disabled
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 text-gray-800 cursor-not-allowed font-medium"
+                      >
+                        <option value={addManagerInfo.managers[0].id}>
+                          {addManagerInfo.managers[0].name} ({addManagerInfo.managers[0].role.replace(/_/g, ' ')} - {addManagerInfo.managers[0].department})
+                        </option>
+                      </select>
+                      <p className="text-[11px] text-amber-800 mt-1 font-medium">
+                        Automatically assigned based on role, department, and team.
+                      </p>
+                    </>
+                  ) : addManagerInfo.managers.length > 1 ? (
+                    <select
+                      value={effectiveAddManagerId}
+                      onChange={(e) => {
+                        setFormData({ ...formData, manager_id: e.target.value });
+                        setFormErrors((prev) => ({ ...prev, manager_id: null }));
+                      }}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 bg-white"
+                    >
+                      <option value="">Select reporting manager...</option>
+                      {addManagerInfo.managers.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} ({m.role.replace(/_/g, ' ')} - {m.department})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <>
+                      <select
+                        value=""
+                        disabled
+                        className="w-full px-3 py-2 text-sm border border-red-300 rounded-lg bg-red-50 text-red-700 cursor-not-allowed"
+                      >
+                        <option value="">No eligible manager available</option>
+                      </select>
+                      <p className="text-xs text-red-600 mt-1.5 font-medium leading-relaxed">
+                        {addManagerInfo.configError}
+                      </p>
+                    </>
+                  )}
+                  {formErrors.manager_id && !addManagerInfo.configError && (
+                    <p className="text-red-500 text-xs mt-1">{formErrors.manager_id}</p>
+                  )}
                 </div>
 
                 <div>
