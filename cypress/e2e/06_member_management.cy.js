@@ -65,9 +65,9 @@ describe('6. Member Management & Access Control Guarding (Sprint 2)', () => {
     cy.contains('label', 'Team').parent().find('select').select('Quality Assurance');
     cy.get('select:disabled').should('contain', 'Kasun Bandara');
 
-    // 3. Change role to Team Manager for IT -> automatically reports to Department Manager (Danushka Jayawardena)
+    // 3. Change role to Team Manager for IT -> automatically reports to Department Manager (Dinesh Jayawardena)
     cy.contains('label', 'Role').parent().find('select').select('team_manager');
-    cy.get('select:disabled').should('contain', 'Danushka Jayawardena');
+    cy.get('select:disabled').should('contain', 'Dinesh Jayawardena');
 
     // 4. Change role to Administrator -> Top Level / Direct (disabled, None)
     cy.contains('label', 'Role').parent().find('select').select('admin');
