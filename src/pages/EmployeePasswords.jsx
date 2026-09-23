@@ -516,9 +516,8 @@ export default function EmployeePasswords() {
                   return (
                     <tr
                       key={member.id}
-                      className={`hover:bg-amber-50/20 transition-colors ${
-                        isZeroLogins ? 'bg-amber-50/10' : ''
-                      }`}
+                      className={`hover:bg-amber-50/20 transition-colors ${isZeroLogins ? 'bg-amber-50/10' : ''
+                        }`}
                     >
                       {/* Employee Details */}
                       <td className="py-3 px-4">
@@ -552,7 +551,7 @@ export default function EmployeePasswords() {
                               <span className="font-mono text-xs font-semibold text-gray-800 select-all tracking-wide">
                                 {isRevealed ? member.plain_password : '••••••••••••'}
                               </span>
-                              
+
                               {/* Toggle visibility */}
                               <button
                                 type="button"
