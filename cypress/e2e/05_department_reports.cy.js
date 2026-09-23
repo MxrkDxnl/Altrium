@@ -16,7 +16,8 @@ describe('5. Department Summary Reports & HR Portfolio (Sprint 2)', () => {
     cy.visit(`${VERCEL_URL}/department-reports`);
     cy.wait('@getPreview');
 
-    // 3. Verify HR Designated Recipient (Ayesha Perera for IT)
+    // 3. Open report form to view designated HR recipient (Ayesha Perera for IT)
+    cy.contains(/Create Department Report|Create First Report/i).click();
     cy.contains(/Ayesha Perera|ayesha\.hr@altrium\.com/i).should('be.visible');
   });
 
