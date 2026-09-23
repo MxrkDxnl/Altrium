@@ -32,7 +32,7 @@ describe('2. Self-Review Lifecycle (Sprint 1)', () => {
         cy.contains(/assigned successfully|Self-review assigned/i, { timeout: 8000 }).should('be.visible');
       } else {
         // If all employees already have an assigned self-review for this cycle
-        cy.contains(/All eligible|Already assigned/i).should('be.visible');
+        cy.get('p').contains(/All eligible/i).should('be.visible');
       }
     });
   });
