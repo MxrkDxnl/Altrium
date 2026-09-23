@@ -1004,10 +1004,10 @@ router.get('/', auth, async (req, res) => {
     }
 
     // 5.2 Evidence submitted awaiting manager feedback
-    if (['team_manager', 'department_manager', 'hr_manager'].includes(currentUser.role)) {
+    if (['team_manager', 'department_manager', 'hr_manager', 'operational_manager', 'company_manager'].includes(currentUser.role)) {
       // Find candidate plan IDs
       let planWhere = { status: 'evidence_submitted' };
-      if (currentUser.role === 'team_manager' || isAmaya) {
+      if (currentUser.role === 'team_manager' || isAmaya || currentUser.role === 'operational_manager' || currentUser.role === 'company_manager') {
         planWhere.manager_id = currentUser.id;
       } else if (currentUser.role === 'department_manager') {
         const deptUsers = await User.findAll({
