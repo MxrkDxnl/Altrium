@@ -44,7 +44,7 @@ router.post('/assign-self', auth, async (req, res) => {
       return res.status(403).json({ message: 'Administrators are not permitted to assign reviews' });
     }
 
-    const allowedRoles = ['team_manager', 'department_manager', 'hr_manager', 'operational_manager'];
+    const allowedRoles = ['team_manager', 'department_manager', 'hr_manager', 'operational_manager', 'company_manager'];
     if (!allowedRoles.includes(manager.role)) {
       return res.status(403).json({ message: 'Only managers can assign self-reviews' });
     }
@@ -72,7 +72,7 @@ router.post('/assign-self', auth, async (req, res) => {
       return res.status(400).json({ message: 'One or more selected recipients were not found' });
     }
 
-    if (manager.role === 'operational_manager') {
+    if (manager.role === 'operational_manager' || manager.role === 'company_manager') {
       const allDirectDeptHeads = recipients.every(r =>
         r.manager_id === manager.id &&
         ['department_manager', 'hr_manager'].includes(r.role)
@@ -322,7 +322,7 @@ router.post('/assign-peer', auth, async (req, res) => {
       return res.status(403).json({ message: 'Administrators are not permitted to assign reviews' });
     }
 
-    const allowedRoles = ['team_manager', 'department_manager', 'hr_manager', 'operational_manager'];
+    const allowedRoles = ['team_manager', 'department_manager', 'hr_manager', 'operational_manager', 'company_manager'];
     if (!allowedRoles.includes(manager.role)) {
       return res.status(403).json({ message: 'Only managers can assign reviews' });
     }
@@ -358,7 +358,7 @@ router.post('/assign-peer', auth, async (req, res) => {
     // PEER TYPE 2: MANAGER REVIEWS DIRECT REPORTS (Downward / Grouped)
     // =========================================================================
     if (peerType === 'manager_to_reports') {
-      if (manager.role === 'team_manager' || manager.role === 'hr_manager') {
+      if (!['department_manager', 'operational_manager', 'company_manager'].includes(manager.role)) {
         return res.status(403).json({ message: 'Only Department Managers and Operational Manager can initiate downward reviews' });
       }
 
@@ -394,7 +394,7 @@ router.post('/assign-peer', auth, async (req, res) => {
           attributes: ['id', 'name', 'email', 'role', 'department', 'team', 'quarter_batch'],
           order: [['name', 'ASC']]
         });
-      } else if (manager.role === 'operational_manager') {
+      } else if (manager.role === 'operational_manager' || manager.role === 'company_manager') {
         if (!department) {
           return res.status(400).json({ message: 'A department must be selected to assign downward reviews' });
         }
@@ -497,8 +497,11 @@ router.post('/assign-peer', auth, async (req, res) => {
         return { taskId: task.id, notifId: notif.id, subjectsCount: subjectIds.length, reviewerName: reviewer.name };
       });
 
+      const isOm = manager.role === 'operational_manager' || manager.role === 'company_manager';
       return res.json({
-        message: `Group downward review task assigned to ${result.reviewerName} for ${result.subjectsCount} direct reports.`,
+        message: isOm
+          ? `Group downward review task assigned to ${result.reviewerName} for ${result.subjectsCount} team managers.`
+          : `Group downward review task assigned to ${result.reviewerName} for ${result.subjectsCount} direct reports.`,
         taskIds: [result.taskId],
         notificationIds: [result.notifId]
       });
@@ -508,7 +511,7 @@ router.post('/assign-peer', auth, async (req, res) => {
     // PEER TYPE 3: DIRECT REPORTS REVIEW THEIR MANAGER (Upward Reviews)
     // =========================================================================
     if (peerType === 'reports_to_manager') {
-      if (manager.role === 'team_manager' || manager.role === 'hr_manager') {
+      if (!['department_manager', 'operational_manager', 'company_manager'].includes(manager.role)) {
         return res.status(403).json({ message: 'Only Department Managers and Operational Manager can initiate upward reviews' });
       }
 
@@ -544,7 +547,7 @@ router.post('/assign-peer', auth, async (req, res) => {
           attributes: ['id', 'name', 'email', 'role', 'department', 'team', 'quarter_batch'],
           order: [['name', 'ASC']]
         });
-      } else if (manager.role === 'operational_manager') {
+      } else if (manager.role === 'operational_manager' || manager.role === 'company_manager') {
         if (!department) {
           return res.status(400).json({ message: 'A department must be selected to assign upward reviews' });
         }
@@ -650,9 +653,10 @@ router.post('/assign-peer', auth, async (req, res) => {
 
           taskIds.push(task.id);
 
+          const isOm = manager.role === 'operational_manager' || manager.role === 'company_manager';
           const notif = await Notification.create({
             user_id: dr.id,
-            message: `You have been assigned to provide an upward review for your manager ${subject.name} (${quarter} ${currentYear}).`,
+            message: `You have been assigned to provide an upward review for your ${isOm ? 'department manager' : 'manager'} ${subject.name} (${quarter} ${currentYear}).`,
             link: '/my-tasks',
             entity_type: 'task',
             entity_id: task.id
@@ -664,8 +668,10 @@ router.post('/assign-peer', auth, async (req, res) => {
         return { taskIds, notifIds, assignedCount: neededReviewers.length, subjectName: subject.name, alreadyAssignedCount: existingTasks.length };
       });
 
+      const isOm = manager.role === 'operational_manager' || manager.role === 'company_manager';
+      const targetLabel = isOm ? 'team managers' : 'direct reports';
       return res.json({
-        message: `Upward reviews assigned: ${result.assignedCount} new task(s) created for direct reports of ${result.subjectName}${result.alreadyAssignedCount > 0 ? ` (${result.alreadyAssignedCount} were already assigned)` : ''}.`,
+        message: `Upward reviews assigned: ${result.assignedCount} new task(s) created for ${targetLabel} of ${result.subjectName}${result.alreadyAssignedCount > 0 ? ` (${result.alreadyAssignedCount} were already assigned)` : ''}.`,
         taskIds: result.taskIds,
         notificationIds: result.notifIds
       });
@@ -735,7 +741,7 @@ router.post('/assign-peer', auth, async (req, res) => {
       if (!allInDept) {
         return res.status(403).json({ message: 'Subject and reviewers must all be Team Managers in your department' });
       }
-    } else if (manager.role === 'operational_manager') {
+    } else if (manager.role === 'operational_manager' || manager.role === 'company_manager') {
       const allDirectHeads = [subjectUser, rev1User, rev2User].every(u =>
         u.manager_id === manager.id &&
         ['department_manager', 'hr_manager'].includes(u.role)

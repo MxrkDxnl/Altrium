@@ -89,8 +89,8 @@ export default function AssignReview() {
     if (isCompanyManager) {
       return [
         { value: 'same_level', label: 'Within Department Managers' },
-        { value: 'manager_to_reports', label: 'Department Manager Reviews Direct Reports' },
-        { value: 'reports_to_manager', label: 'Direct Reports Review Their Department Manager' }
+        { value: 'manager_to_reports', label: 'Dept Managers Review Team Managers' },
+        { value: 'reports_to_manager', label: 'Team Managers Review Department Managers' }
       ];
     }
     return [{ value: 'same_level', label: 'Peer Review' }];
@@ -375,7 +375,7 @@ export default function AssignReview() {
           quarter,
           year: currentYear
         });
-        setSuccess('Downward review assigned successfully as a grouped task to the manager.');
+        setSuccess(isCompanyManager ? 'Downward review assigned successfully as a grouped task to the department manager.' : 'Downward review assigned successfully as a grouped task to the manager.');
         setSelectedTeam('');
         setSelectedDepartment('');
         setGroupDetails(null);
@@ -417,7 +417,7 @@ export default function AssignReview() {
           quarter,
           year: currentYear
         });
-        setSuccess('Upward reviews assigned successfully to direct reports.');
+        setSuccess(isCompanyManager ? 'Upward reviews assigned successfully to team managers.' : 'Upward reviews assigned successfully to direct reports.');
         setSelectedTeam('');
         setSelectedDepartment('');
         setGroupDetails(null);
@@ -468,7 +468,7 @@ export default function AssignReview() {
         <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 leading-tight">Assign Reviews</h1>
         <p className="text-gray-600 mt-1 text-sm sm:text-base">
           {isCompanyManager
-            ? 'Assign self-reviews, same-level peer reviews, downward grouped reviews, and upward direct-report evaluations for department leadership.'
+            ? 'Assign self-reviews, same-level peer reviews, downward reviews between department heads and team managers, and upward evaluations for department leadership.'
             : isHRManager
             ? 'Assign self-reviews and same-level peer reviews for HR employees.'
             : isDepartmentManager
@@ -890,14 +890,24 @@ export default function AssignReview() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-gray-500 block text-xs">Review Direction</span>
-                    <span className="font-medium text-gray-900">Manager Reviews Direct Reports (1 Grouped Task)</span>
+                    <span className="font-medium text-gray-900">
+                      {isCompanyManager
+                        ? 'Dept Managers Review Team Managers (1 Grouped Task)'
+                        : 'Manager Reviews Direct Reports (1 Grouped Task)'}
+                    </span>
                   </div>
                   <div>
-                    <span className="text-gray-500 block text-xs">Assigned Manager (Reviewer)</span>
-                    <span className="font-medium text-gray-900">{groupDetails?.reviewer?.name || 'Select team/department'}</span>
+                    <span className="text-gray-500 block text-xs">
+                      {isCompanyManager ? 'Department Manager (Reviewer)' : 'Assigned Manager (Reviewer)'}
+                    </span>
+                    <span className="font-medium text-gray-900">{groupDetails?.reviewer?.name || (isCompanyManager ? 'Select department' : 'Select team')}</span>
                   </div>
                   <div className="sm:col-span-2">
-                    <span className="text-gray-500 block text-xs">Direct Reports Being Reviewed ({groupDetails?.subjects?.length || 0} employees)</span>
+                    <span className="text-gray-500 block text-xs">
+                      {isCompanyManager
+                        ? `Team Managers Being Reviewed (${groupDetails?.subjects?.length || 0})`
+                        : `Direct Reports Being Reviewed (${groupDetails?.subjects?.length || 0} employees)`}
+                    </span>
                     <span className="font-medium text-gray-700 text-xs">
                       {groupDetails?.subjects?.map(s => s.name).join(', ') || 'None resolved'}
                     </span>
@@ -921,15 +931,21 @@ export default function AssignReview() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-gray-500 block text-xs">Review Direction</span>
-                    <span className="font-medium text-gray-900">Direct Reports Review Manager (Many-to-One Upward)</span>
+                    <span className="font-medium text-gray-900">
+                      {isCompanyManager
+                        ? 'Team Managers Review Department Managers (Many-to-One Upward)'
+                        : 'Direct Reports Review Manager (Many-to-One Upward)'}
+                    </span>
                   </div>
                   <div>
-                    <span className="text-gray-500 block text-xs">Person Being Reviewed (Manager)</span>
-                    <span className="font-medium text-gray-900">{groupDetails?.subject?.name || 'Select team/department'}</span>
+                    <span className="text-gray-500 block text-xs">
+                      {isCompanyManager ? 'Department Manager Being Reviewed' : 'Person Being Reviewed (Manager)'}
+                    </span>
+                    <span className="font-medium text-gray-900">{groupDetails?.subject?.name || (isCompanyManager ? 'Select department' : 'Select team')}</span>
                   </div>
                   <div className="sm:col-span-2">
                     <span className="text-gray-500 block text-xs">
-                      Reviewers ({groupDetails?.reviewers?.filter(r => !r.isAssigned).length || 0} unassigned of {groupDetails?.totalCount || 0})
+                      {isCompanyManager ? 'Team Manager Reviewers' : 'Reviewers'} ({groupDetails?.reviewers?.filter(r => !r.isAssigned).length || 0} unassigned of {groupDetails?.totalCount || 0})
                     </span>
                     <span className="font-medium text-gray-700 text-xs">
                       {groupDetails?.reviewers?.map(r => `${r.name}${r.isAssigned ? ' (assigned)' : ''}`).join(', ') || 'None resolved'}
@@ -939,7 +955,9 @@ export default function AssignReview() {
                     <span className="text-gray-500 block text-xs">Existing Status</span>
                     <span className="font-medium">
                       {groupDetails?.isFullyAssigned ? (
-                        <span className="text-red-600">All direct reports assigned</span>
+                        <span className="text-red-600">
+                          {isCompanyManager ? 'All team managers assigned' : 'All direct reports assigned'}
+                        </span>
                       ) : groupDetails?.assignedCount > 0 ? (
                         <span className="text-amber-600">Partially assigned ({groupDetails.assignedCount} of {groupDetails.totalCount})</span>
                       ) : (

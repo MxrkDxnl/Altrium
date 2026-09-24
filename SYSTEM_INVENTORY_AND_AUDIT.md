@@ -232,7 +232,7 @@ The active database contains **exactly 94 accounts**.
   - **Team Manager**: "Within Employees".
   - **HR Department Manager (Amaya)**: "Within Employees".
   - **IT/Finance Department Manager (Dinesh, Chamari)**: "Within Team Managers", "Team Manager Reviews Employees", "Employees Review Their Team Manager".
-  - **Company Manager (Anura)**: "Within Department Managers", "Department Manager Reviews Direct Reports", "Direct Reports Review Their Department Manager".
+  - **Company Manager (Anura)**: "Within Department Managers", "Dept Managers Review Team Managers", "Team Managers Review Department Managers".
 - Full-width layout with live interactive **Assignment Preview Card**.
 
 ### 4.2 Grouped Downward Review Form (`ReviewForm.jsx`)

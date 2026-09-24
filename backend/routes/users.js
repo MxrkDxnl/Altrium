@@ -95,7 +95,7 @@ router.get('/eligible', auth, async (req, res) => {
       return res.status(403).json({ message: 'Administrators are not permitted to assign reviews' });
     }
 
-    const allowedRoles = ['team_manager', 'department_manager', 'hr_manager', 'operational_manager'];
+    const allowedRoles = ['team_manager', 'department_manager', 'hr_manager', 'operational_manager', 'company_manager'];
     if (!allowedRoles.includes(manager.role)) {
       return res.status(403).json({ message: 'Only managers can fetch eligible users' });
     }
@@ -111,7 +111,7 @@ router.get('/eligible', auth, async (req, res) => {
     // =========================================================================
     if (review_type === 'self_review') {
       let subordinates = [];
-      if (manager.role === 'operational_manager') {
+      if (manager.role === 'operational_manager' || manager.role === 'company_manager') {
         subordinates = await User.findAll({
           where: { manager_id: manager.id },
           attributes: ['id', 'name', 'email', 'role', 'department', 'team', 'report_portfolio', 'quarter_batch'],
@@ -170,8 +170,8 @@ router.get('/eligible', auth, async (req, res) => {
     // MODE 2: PEER TYPE 2 - MANAGER REVIEWS DIRECT REPORTS (Downward / Grouped)
     // =========================================================================
     if (review_type === 'peer_review' && peer_type === 'manager_to_reports') {
-      if (manager.role === 'team_manager' || manager.role === 'hr_manager') {
-        return res.status(403).json({ message: 'Only Department Managers and Company Manager can initiate downward reviews' });
+      if (!['department_manager', 'operational_manager', 'company_manager'].includes(manager.role)) {
+        return res.status(403).json({ message: 'Only Department Managers and Operational Manager can initiate downward reviews' });
       }
 
       // Department Manager selecting a team
@@ -232,8 +232,8 @@ router.get('/eligible', auth, async (req, res) => {
         });
       }
 
-      // Operational Manager selecting a Department
-      if (manager.role === 'operational_manager') {
+      // Operational / Company Manager selecting a Department
+      if (manager.role === 'operational_manager' || manager.role === 'company_manager') {
         const availableDepts = [
           { department: 'IT', label: 'IT Department (Dinesh Jayawardena)' },
           { department: 'Finance', label: 'Finance Department (Chamari Perera)' },
@@ -303,8 +303,8 @@ router.get('/eligible', auth, async (req, res) => {
     // MODE 3: PEER TYPE 3 - DIRECT REPORTS REVIEW THEIR MANAGER (Upward / Many-to-One)
     // =========================================================================
     if (review_type === 'peer_review' && peer_type === 'reports_to_manager') {
-      if (manager.role === 'team_manager' || manager.role === 'hr_manager') {
-        return res.status(403).json({ message: 'Only Department Managers and Company Manager can initiate upward reviews' });
+      if (!['department_manager', 'operational_manager', 'company_manager'].includes(manager.role)) {
+        return res.status(403).json({ message: 'Only Department Managers and Operational Manager can initiate upward reviews' });
       }
 
       // Department Manager selecting a team
@@ -372,8 +372,8 @@ router.get('/eligible', auth, async (req, res) => {
         });
       }
 
-      // Company Manager selecting a Department
-      if (manager.role === 'company_manager') {
+      // Operational / Company Manager selecting a Department
+      if (manager.role === 'operational_manager' || manager.role === 'company_manager') {
         const availableDepts = [
           { department: 'IT', label: 'IT Department (Dinesh Jayawardena)' },
           { department: 'Finance', label: 'Finance Department (Chamari Perera)' },
@@ -450,8 +450,8 @@ router.get('/eligible', auth, async (req, res) => {
     // =========================================================================
     // MODE 4: PEER TYPE 1 - SAME LEVEL REVIEWS (2 Reviewers to 1 Subject)
     // =========================================================================
-    // Company Manager: Within Department Managers
-    if (manager.role === 'company_manager') {
+    // Operational / Company Manager: Within Department Managers
+    if (manager.role === 'operational_manager' || manager.role === 'company_manager') {
       const deptHeads = await User.findAll({
         where: { manager_id: manager.id },
         attributes: ['id', 'name', 'email', 'role', 'department', 'team', 'report_portfolio', 'quarter_batch'],
