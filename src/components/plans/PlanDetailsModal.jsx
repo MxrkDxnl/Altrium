@@ -24,6 +24,12 @@ export default function PlanDetailsModal({ planId, onClose, onEvidenceSubmitted 
   const [showEndPdpConfirm, setShowEndPdpConfirm] = useState(false);
   const [endingPdp, setEndingPdp] = useState(false);
 
+  // Assigning manager plan complete / cancel states
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [completingPlan, setCompletingPlan] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancellingPlan, setCancellingPlan] = useState(false);
+
   const modalRef = useRef(null);
   const closeButtonRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -332,6 +338,62 @@ export default function PlanDetailsModal({ planId, onClose, onEvidenceSubmitted 
     }
   };
 
+  const handleCompleteConfirm = async () => {
+    setCompletingPlan(true);
+    setUploadError('');
+    try {
+      await api.post(`/plans/${planId}/complete`);
+      setPlan(prev => ({
+        ...prev,
+        status: 'completed',
+        canEndPdp: false,
+        lifecycleStatus: {
+          ...prev.lifecycleStatus,
+          isOpen: false,
+          reason: `This ${prev.type} plan has been completed and concluded.`
+        }
+      }));
+      setShowCompleteConfirm(false);
+      setUploadSuccess(`${plan.type} plan concluded and marked completed successfully.`);
+      if (onEvidenceSubmitted) {
+        onEvidenceSubmitted();
+      }
+    } catch (err) {
+      console.error('Failed to complete plan:', err);
+      setUploadError(err.response?.data?.message || 'Failed to complete plan. Please try again.');
+    } finally {
+      setCompletingPlan(false);
+    }
+  };
+
+  const handleCancelConfirm = async () => {
+    setCancellingPlan(true);
+    setUploadError('');
+    try {
+      await api.post(`/plans/${planId}/cancel`);
+      setPlan(prev => ({
+        ...prev,
+        status: 'cancelled',
+        canEndPdp: false,
+        lifecycleStatus: {
+          ...prev.lifecycleStatus,
+          isOpen: false,
+          reason: 'This plan has been cancelled by the assigning manager.'
+        }
+      }));
+      setShowCancelConfirm(false);
+      setUploadSuccess('Plan has been successfully cancelled.');
+      if (onEvidenceSubmitted) {
+        onEvidenceSubmitted();
+      }
+    } catch (err) {
+      console.error('Failed to cancel plan:', err);
+      setUploadError(err.response?.data?.message || 'Failed to cancel plan. Please try again.');
+    } finally {
+      setCancellingPlan(false);
+    }
+  };
+
   const getFeedbackState = (evidenceId) => {
     return feedbackInputs[evidenceId] || {
       text: '',
@@ -505,18 +567,124 @@ export default function PlanDetailsModal({ planId, onClose, onEvidenceSubmitted 
                   {plan.title}
                 </h2>
 
-                {/* Assigning Manager Action: End Development Plan */}
-                {plan.canEndPdp && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowEndPdpConfirm(true)}
-                    className="text-xs px-3.5 py-1.5 font-semibold text-emerald-800 border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 transition-colors shadow-2xs whitespace-nowrap self-start sm:self-center"
-                  >
-                    End Development Plan
-                  </Button>
-                )}
+                {/* Assigning Manager Action Buttons */}
+                <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                  {plan.canEndPdp && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowEndPdpConfirm(true)}
+                      className="text-xs px-3.5 py-1.5 font-semibold text-emerald-800 border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 transition-colors shadow-2xs whitespace-nowrap"
+                    >
+                      End Development Plan
+                    </Button>
+                  )}
+
+                  {plan.type === 'PIP' && plan.isAssigningManager && plan.status !== 'completed' && plan.status !== 'cancelled' && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowCompleteConfirm(true)}
+                      className="text-xs px-3.5 py-1.5 font-semibold text-emerald-800 border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100 transition-colors shadow-2xs whitespace-nowrap"
+                    >
+                      Mark PIP Completed
+                    </Button>
+                  )}
+
+                  {plan.isAssigningManager && plan.status !== 'completed' && plan.status !== 'cancelled' && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowCancelConfirm(true)}
+                      className="text-xs px-3 py-1.5 font-semibold text-red-700 border-red-200 bg-red-50/50 hover:bg-red-100 transition-colors shadow-2xs whitespace-nowrap"
+                    >
+                      Cancel Plan
+                    </Button>
+                  )}
+                </div>
               </div>
+
+              {/* Complete PIP Confirmation Banner */}
+              {showCompleteConfirm && (
+                <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-4 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-start space-x-2.5">
+                    <svg className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <div>
+                      <h4 className="text-sm font-bold text-emerald-900">
+                        Confirm Concluding Performance Improvement Plan
+                      </h4>
+                      <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
+                        Are you sure you want to mark this PIP as completed for <span className="font-semibold">{plan.recipient?.name}</span>?
+                        Ending the plan concludes further evidence uploads while permanently preserving all uploaded evidence files, notes, and records.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-2 pt-1 border-t border-emerald-200">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowCompleteConfirm(false)}
+                      disabled={completingPlan}
+                      className="text-xs px-3 py-1.5 bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={handleCompleteConfirm}
+                      disabled={completingPlan}
+                      className="text-xs px-3.5 py-1.5 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      {completingPlan ? 'Concluding Plan...' : 'Confirm & Complete'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Cancel Plan Confirmation Banner */}
+              {showCancelConfirm && (
+                <div className="bg-red-50 border border-red-300 rounded-lg p-4 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-start space-x-2.5">
+                    <svg className="w-5 h-5 text-red-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                      <h4 className="text-sm font-bold text-red-900">
+                        Confirm Cancelling {plan.type} Plan
+                      </h4>
+                      <p className="text-xs text-red-800 mt-1 leading-relaxed">
+                        Are you sure you want to cancel the {plan.type} plan &ldquo;{plan.title}&rdquo; for <span className="font-semibold">{plan.recipient?.name}</span>?
+                        This will mark the plan and linked tasks as cancelled.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-2 pt-1 border-t border-red-200">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowCancelConfirm(false)}
+                      disabled={cancellingPlan}
+                      className="text-xs px-3 py-1.5 bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    >
+                      Keep Plan
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={handleCancelConfirm}
+                      disabled={cancellingPlan}
+                      className="text-xs px-3.5 py-1.5 font-semibold bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {cancellingPlan ? 'Cancelling Plan...' : 'Confirm & Cancel Plan'}
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* End PDP Confirmation Modal / Banner */}
               {showEndPdpConfirm && (

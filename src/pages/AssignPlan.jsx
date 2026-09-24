@@ -9,6 +9,7 @@ export default function AssignPlan() {
   const { currentUser } = useAuth();
   const isCompanyManager = currentUser?.role === 'operational_manager' || currentUser?.role === 'company_manager';
   const isDepartmentManager = currentUser?.role === 'department_manager';
+  const isHRManager = currentUser?.role === 'hr_manager';
 
   const [planType, setPlanType] = useState('');
   const [planRecipientId, setPlanRecipientId] = useState('');
@@ -32,7 +33,7 @@ export default function AssignPlan() {
       })
       .catch(err => {
         console.error('Failed to fetch eligible plan recipients:', err);
-        setPlanError(err.response?.data?.message || (isCompanyManager ? 'Failed to load eligible Department Heads' : isDepartmentManager ? 'Failed to load eligible Team Managers' : 'Failed to load eligible direct reports'));
+        setPlanError(err.response?.data?.message || (isCompanyManager ? 'Failed to load eligible Department Heads' : isDepartmentManager ? 'Failed to load eligible Team Managers' : isHRManager ? 'Failed to load eligible direct HR employees' : 'Failed to load eligible direct reports'));
       });
   };
 
@@ -51,7 +52,7 @@ export default function AssignPlan() {
       .catch(err => {
         if (active) {
           console.error('Failed to load eligible recipients:', err);
-          setPlanError(err.response?.data?.message || (isCompanyManager ? 'Failed to load eligible Department Heads' : isDepartmentManager ? 'Failed to load eligible Team Managers' : 'Failed to load eligible direct reports'));
+          setPlanError(err.response?.data?.message || (isCompanyManager ? 'Failed to load eligible Department Heads' : isDepartmentManager ? 'Failed to load eligible Team Managers' : isHRManager ? 'Failed to load eligible direct HR employees' : 'Failed to load eligible direct reports'));
         }
       })
       .finally(() => {
@@ -61,7 +62,7 @@ export default function AssignPlan() {
       });
 
     return () => { active = false; };
-  }, [isDepartmentManager, isCompanyManager]);
+  }, [isDepartmentManager, isCompanyManager, isHRManager]);
 
   const validateFrontendPlanInputs = (title, description) => {
     const errs = {};
@@ -128,7 +129,7 @@ export default function AssignPlan() {
 
     const clientErrors = validateFrontendPlanInputs(planTitle, planDescription);
     if (!planRecipientId) {
-      clientErrors.recipient = isCompanyManager ? 'Please select a Department Head.' : isDepartmentManager ? 'Please select a Team Manager.' : 'Please select an eligible direct report.';
+      clientErrors.recipient = isCompanyManager ? 'Please select a Department Head.' : isDepartmentManager ? 'Please select a Team Manager.' : isHRManager ? 'Please select a direct HR employee.' : 'Please select an eligible direct report.';
     }
     if (!planType) {
       clientErrors.type = 'Please select a plan type (PIP or PDP).';
@@ -325,12 +326,14 @@ export default function AssignPlan() {
                 ? 'Select Department Head (Recipient)'
                 : isDepartmentManager
                 ? 'Select Team Manager (Recipient)'
+                : isHRManager
+                ? 'Select Direct HR Employee (Recipient)'
                 : 'Select Direct Report (Recipient)'}
             </label>
 
             {loadingRecipients ? (
               <p className="text-xs text-gray-500">
-                {isCompanyManager ? 'Loading Department Heads...' : isDepartmentManager ? 'Loading Team Managers...' : 'Loading direct reports...'}
+                {isCompanyManager ? 'Loading Department Heads...' : isDepartmentManager ? 'Loading Team Managers...' : isHRManager ? 'Loading direct HR employees...' : 'Loading direct reports...'}
               </p>
             ) : eligibleRecipients.length === 0 ? (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
@@ -338,6 +341,8 @@ export default function AssignPlan() {
                   ? 'No direct Department Heads found.'
                   : isDepartmentManager
                   ? 'No direct Team Managers found in your department.'
+                  : isHRManager
+                  ? 'No direct HR employees found.'
                   : 'No eligible direct reports found for the active cycle.'}
               </div>
             ) : (
@@ -358,17 +363,25 @@ export default function AssignPlan() {
                       ? '-- Select Department Head --'
                       : isDepartmentManager
                       ? '-- Select Team Manager --'
+                      : isHRManager
+                      ? '-- Select Direct HR Employee --'
                       : '-- Select Direct Report --'}
                   </option>
                   {eligibleRecipients.map((rec) => {
                     const isAssigned = planType === 'PIP' ? rec.hasPip : rec.hasPdp;
+                    const subtitle = isCompanyManager
+                      ? (rec.department ? `${rec.department} Dept` : 'Management')
+                      : isHRManager
+                      ? (rec.report_portfolio ? `${rec.report_portfolio} Portfolio` : 'HR Associate')
+                      : (rec.team || rec.role?.replace('_', ' '));
+
                     return (
                       <option
                         key={rec.id}
                         value={rec.id}
                         disabled={isAssigned}
                       >
-                        {rec.name} ({isCompanyManager ? (rec.department ? `${rec.department} Dept` : 'Management') : rec.team || rec.role?.replace('_', ' ')})
+                        {rec.name} ({subtitle})
                         {isAssigned ? ` — [Already assigned a ${planType} for ${activeCycleInfo.quarter} ${activeCycleInfo.year}]` : ''}
                       </option>
                     );
@@ -383,6 +396,8 @@ export default function AssignPlan() {
                       ? `All direct Department Heads have already been assigned a ${planType} for ${activeCycleInfo.quarter} ${activeCycleInfo.year}.`
                       : isDepartmentManager
                       ? `All direct Team Managers have already been assigned a ${planType} for ${activeCycleInfo.quarter} ${activeCycleInfo.year}.`
+                      : isHRManager
+                      ? `All direct HR employees have already been assigned a ${planType} for ${activeCycleInfo.quarter} ${activeCycleInfo.year}.`
                       : `All eligible direct reports have already been assigned a ${planType} for ${activeCycleInfo.quarter} ${activeCycleInfo.year}.`}
                   </p>
                 )}

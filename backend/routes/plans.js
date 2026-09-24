@@ -71,8 +71,8 @@ router.get('/eligible-recipients', auth, async (req, res) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    if (!['team_manager', 'department_manager', 'operational_manager', 'company_manager'].includes(manager.role)) {
-      return res.status(403).json({ message: 'Only Team Managers, Department Managers, and Operational Managers can assign plans' });
+    if (!['team_manager', 'department_manager', 'operational_manager', 'company_manager', 'hr_manager'].includes(manager.role)) {
+      return res.status(403).json({ message: 'Only Team Managers, Department Managers, Operational Managers, and HR Manager can assign plans' });
     }
 
     let recipients = [];
@@ -117,6 +117,16 @@ router.get('/eligible-recipients', auth, async (req, res) => {
           role: { [Op.in]: ['department_manager', 'hr_manager'] }
         },
         attributes: ['id', 'name', 'email', 'role', 'department', 'team', 'quarter_batch'],
+        order: [['name', 'ASC']]
+      });
+    } else if (manager.role === 'hr_manager') {
+      recipients = await User.findAll({
+        where: {
+          manager_id: manager.id,
+          role: 'employee',
+          department: ['Human Resources', 'HR']
+        },
+        attributes: ['id', 'name', 'email', 'role', 'department', 'team', 'quarter_batch', 'report_portfolio'],
         order: [['name', 'ASC']]
       });
     }
@@ -179,8 +189,8 @@ router.post('/', auth, async (req, res) => {
       return res.status(403).json({ message: 'Administrators are not permitted to assign plans' });
     }
 
-    if (!['team_manager', 'department_manager', 'operational_manager', 'company_manager'].includes(manager.role)) {
-      return res.status(403).json({ message: 'Only Team Managers, Department Managers, and Operational Managers can assign plans' });
+    if (!['team_manager', 'department_manager', 'operational_manager', 'company_manager', 'hr_manager'].includes(manager.role)) {
+      return res.status(403).json({ message: 'Only Team Managers, Department Managers, Operational Managers, and HR Manager can assign plans' });
     }
 
     const { quarter: activeQuarter, year: activeYear } = getActiveQuarterAndYear();
@@ -248,6 +258,17 @@ router.post('/', auth, async (req, res) => {
       if (!isDirectDeptHead) {
         return res.status(403).json({
           message: 'Recipient is not an eligible direct Department Head'
+        });
+      }
+    } else if (manager.role === 'hr_manager') {
+      const isDirectHREmployee =
+        recipient.manager_id === manager.id &&
+        recipient.role === 'employee' &&
+        ['Human Resources', 'HR'].includes(recipient.department);
+
+      if (!isDirectHREmployee) {
+        return res.status(403).json({
+          message: 'Recipient is not an eligible direct HR employee'
         });
       }
     }
@@ -332,8 +353,8 @@ router.get('/assigned', auth, async (req, res) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    if (!['team_manager', 'department_manager', 'operational_manager', 'company_manager'].includes(manager.role)) {
-      return res.status(403).json({ message: 'Only Team Managers, Department Managers, and Operational Managers can view assigned plans' });
+    if (!['team_manager', 'department_manager', 'operational_manager', 'company_manager', 'hr_manager'].includes(manager.role)) {
+      return res.status(403).json({ message: 'Only Team Managers, Department Managers, Operational Managers, and HR Manager can view assigned plans' });
     }
 
     const plans = await Plan.findAll({
@@ -772,6 +793,196 @@ const handleEndPdp = async (req, res) => {
 
 router.patch('/:id/end-pdp', auth, handleEndPdp);
 router.put('/:id/end-pdp', auth, handleEndPdp);
+
+// POST & PATCH /api/plans/:id/complete
+// Assigning Manager marks a plan (PIP or PDP) as completed
+const handleCompletePlan = async (req, res) => {
+  try {
+    const planId = parseInt(req.params.id, 10);
+    if (!planId || isNaN(planId)) {
+      return res.status(400).json({ message: 'Invalid plan ID' });
+    }
+
+    const plan = await Plan.findByPk(planId, {
+      include: [
+        { model: User, as: 'manager', attributes: ['id', 'name', 'email'] },
+        { model: User, as: 'recipient', attributes: ['id', 'name', 'email'] }
+      ]
+    });
+
+    if (!plan) {
+      return res.status(404).json({ message: 'Plan not found' });
+    }
+
+    if (plan.manager_id !== req.user.id) {
+      return res.status(403).json({ message: 'Access denied: Only the assigning manager can complete this plan' });
+    }
+
+    if (plan.status === 'completed') {
+      return res.status(400).json({ message: 'This plan is already completed' });
+    }
+
+    const manager = await User.findByPk(req.user.id);
+
+    await sequelize.transaction(async (t) => {
+      const lockedPlan = await Plan.findByPk(plan.id, { transaction: t, lock: t.LOCK.UPDATE });
+      lockedPlan.status = 'completed';
+      await lockedPlan.save({ transaction: t });
+
+      await Task.update(
+        { status: 'completed' },
+        { where: { plan_id: lockedPlan.id }, transaction: t }
+      );
+
+      await Notification.create({
+        user_id: lockedPlan.recipient_id,
+        message: `Your ${lockedPlan.type} plan "${lockedPlan.title}" has been concluded and marked completed by ${manager.name}.`,
+        link: '/my-tasks',
+        entity_type: 'plan',
+        entity_id: lockedPlan.id
+      }, { transaction: t });
+    });
+
+    res.status(200).json({
+      message: `${plan.type} plan marked completed successfully`,
+      planId: plan.id,
+      status: 'completed'
+    });
+  } catch (err) {
+    console.error('Error completing plan:', err);
+    res.status(500).json({ message: 'Server error while completing plan' });
+  }
+};
+
+router.post('/:id/complete', auth, handleCompletePlan);
+router.patch('/:id/complete', auth, handleCompletePlan);
+
+// POST, PATCH, & DELETE /api/plans/:id/cancel
+// Assigning Manager cancels an active plan
+const handleCancelPlan = async (req, res) => {
+  try {
+    const planId = parseInt(req.params.id, 10);
+    if (!planId || isNaN(planId)) {
+      return res.status(400).json({ message: 'Invalid plan ID' });
+    }
+
+    const plan = await Plan.findByPk(planId, {
+      include: [
+        { model: User, as: 'manager', attributes: ['id', 'name', 'email'] },
+        { model: User, as: 'recipient', attributes: ['id', 'name', 'email'] }
+      ]
+    });
+
+    if (!plan) {
+      return res.status(404).json({ message: 'Plan not found' });
+    }
+
+    if (plan.manager_id !== req.user.id) {
+      return res.status(403).json({ message: 'Access denied: Only the assigning manager can cancel this plan' });
+    }
+
+    if (plan.status === 'completed') {
+      return res.status(400).json({ message: 'Cannot cancel an already completed plan' });
+    }
+
+    if (plan.status === 'cancelled') {
+      return res.status(400).json({ message: 'This plan is already cancelled' });
+    }
+
+    const manager = await User.findByPk(req.user.id);
+
+    await sequelize.transaction(async (t) => {
+      const lockedPlan = await Plan.findByPk(plan.id, { transaction: t, lock: t.LOCK.UPDATE });
+      lockedPlan.status = 'cancelled';
+      await lockedPlan.save({ transaction: t });
+
+      await Task.update(
+        { status: 'cancelled' },
+        { where: { plan_id: lockedPlan.id }, transaction: t }
+      );
+
+      await Notification.create({
+        user_id: lockedPlan.recipient_id,
+        message: `Your ${lockedPlan.type} plan "${lockedPlan.title}" has been cancelled by ${manager.name}.`,
+        link: '/my-tasks',
+        entity_type: 'plan',
+        entity_id: lockedPlan.id
+      }, { transaction: t });
+    });
+
+    res.status(200).json({
+      message: `${plan.type} plan cancelled successfully`,
+      planId: plan.id,
+      status: 'cancelled'
+    });
+  } catch (err) {
+    console.error('Error cancelling plan:', err);
+    res.status(500).json({ message: 'Server error while cancelling plan' });
+  }
+};
+
+router.post('/:id/cancel', auth, handleCancelPlan);
+router.patch('/:id/cancel', auth, handleCancelPlan);
+router.delete('/:id', auth, handleCancelPlan);
+
+// PATCH /api/plans/:id
+// Assigning Manager updates plan details or status
+router.patch('/:id', auth, async (req, res) => {
+  try {
+    const planId = parseInt(req.params.id, 10);
+    if (!planId || isNaN(planId)) {
+      return res.status(400).json({ message: 'Invalid plan ID' });
+    }
+
+    const plan = await Plan.findByPk(planId);
+    if (!plan) {
+      return res.status(404).json({ message: 'Plan not found' });
+    }
+
+    if (plan.manager_id !== req.user.id) {
+      return res.status(403).json({ message: 'Access denied: Only the assigning manager can update this plan' });
+    }
+
+    const { title, description, status } = req.body;
+
+    if (status && !['pending', 'evidence_submitted', 'completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid plan status' });
+    }
+
+    if (title !== undefined || description !== undefined) {
+      const planValidation = validatePlanInputs(
+        title !== undefined ? title : plan.title,
+        description !== undefined ? description : plan.description
+      );
+      if (!planValidation.isValid) {
+        return res.status(400).json({
+          message: planValidation.message,
+          errors: planValidation.errors
+        });
+      }
+      if (title !== undefined) plan.title = planValidation.cleanTitle;
+      if (description !== undefined) plan.description = planValidation.cleanDescription;
+    }
+
+    if (status !== undefined) {
+      plan.status = status;
+      await Task.update(
+        { status: status === 'evidence_submitted' ? 'pending' : status },
+        { where: { plan_id: plan.id } }
+      );
+    }
+
+    await plan.save();
+
+    res.json({
+      message: 'Plan updated successfully',
+      plan
+    });
+  } catch (err) {
+    console.error('Error updating plan:', err);
+    res.status(500).json({ message: 'Server error while updating plan' });
+  }
+});
 
 // GET /api/plans/:id/evidence/:evidenceId/download
 // Recipient or Assigning Manager downloads specific evidence file

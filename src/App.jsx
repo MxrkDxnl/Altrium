@@ -94,6 +94,10 @@ export default function App() {
           <>
             <Route path="assign-tasks" element={<AssignReview />} />
             <Route path="assign-reviews" element={<AssignReview />} />
+            <Route path="assign-plan" element={<AssignPlan />} />
+            <Route path="assign-pip-pdp" element={<AssignPlan />} />
+            <Route path="assigned-plans" element={<AssignedPlans />} />
+            <Route path="pip-pdp-table" element={<AssignedPlans />} />
             <Route path="my-tasks" element={<MyTasks />} />
             <Route path="review-form/:id" element={<ReviewForm />} />
             <Route path="hr-reports" element={<HRReports />} />

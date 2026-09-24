@@ -41,6 +41,8 @@ export default function Sidebar({ onNavigate }) {
       { name: 'Dashboard', path: '/' },
       { name: 'My Tasks', path: '/my-tasks' },
       { name: 'Assign Reviews', path: '/assign-tasks', matchPaths: ['/assign-tasks', '/assign-reviews'] },
+      { name: 'Assign PIP / PDP', path: '/assign-plan', matchPaths: ['/assign-plan', '/assign-pip-pdp'] },
+      { name: 'Assigned Plans', path: '/assigned-plans', matchPaths: ['/assigned-plans', '/pip-pdp-table'] },
       { name: 'History', path: '/history', matchPaths: ['/history', '/company-archive', '/past-records'] },
       { name: 'Profile Page', path: '/profile' },
     ],
